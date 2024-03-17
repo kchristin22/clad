@@ -643,6 +643,7 @@ namespace clad {
       request.CallUpdateRequired = true;
       request.VerboseDiags = true;
       request.Args = E->getArg(1);
+      request.ReturnArg = E->getArg(2);
       auto derivedFD = cast<FunctionDecl>(DRE->getDecl());
       request.Function = derivedFD;
       request.BaseFunctionName = utils::ComputeEffectiveFnName(request.Function);

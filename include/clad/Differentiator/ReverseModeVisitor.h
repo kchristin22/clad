@@ -50,6 +50,8 @@ namespace clad {
     /// that will be put immediately in the beginning of derivative function
     /// block.
     Stmts m_Globals;
+    /// The name of the return argument of the void function.
+    llvm::StringRef m_RetParamName;
     //// A reference to the output parameter of the gradient function.
     clang::Expr* m_Result;
     /// Based on To-Be-Recorded analysis performed before differentiation,

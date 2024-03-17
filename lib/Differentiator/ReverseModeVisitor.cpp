@@ -99,7 +99,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
   }
 
   ReverseModeVisitor::ReverseModeVisitor(DerivativeBuilder& builder)
-      : VisitorBase(builder), m_Result(nullptr) {}
+      : VisitorBase(builder), m_RetParamName(""), m_Result(nullptr) {}
 
   ReverseModeVisitor::~ReverseModeVisitor() {
     if (m_ExternalSource) {
@@ -268,6 +268,28 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       std::copy(FD->param_begin(), FD->param_end(), std::back_inserter(args));
     if (args.empty())
       return {};
+
+    if (request.ReturnArg) {
+      auto E =
+          request.ReturnArg
+              ->IgnoreParenImpCasts();
+      // Store param name that represents the result of the void function call
+      if (auto SL = dyn_cast<StringLiteral>(E)) {
+        llvm::StringRef retParamName = SL->getString().trim();
+        auto fArgs = m_Function->parameters();
+        auto it = std::find_if(std::begin(fArgs), std::end(fArgs),
+                              [&retParamName](const ParmVarDecl* PVD) {
+                                return PVD->getNameAsString() ==
+                                        retParamName.str();
+                              });
+        if (it == std::end(fArgs))
+          diag(
+              clang::DiagnosticsEngine::Error, noLoc,
+              "Return argument not found in the list of independent variables");
+        else
+          m_RetParamName = retParamName;
+      }
+    }
 
     if (m_ExternalSource)
       m_ExternalSource->ActAfterParsingDiffArgs(request, args);
