@@ -3494,6 +3494,9 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     // differentiate loop body and add loop increment expression
     // in the forward block.
     StmtDiff bodyDiff = nullptr;
+    // keep track of any break statements in the loop body
+    llvm::SaveAndRestore<bool> SaveBreak(m_HasBreakStmt);
+    m_HasBreakStmt = false;
     if (isa<CompoundStmt>(body)) {
       bodyDiff = Visit(body);
       beginBlock(direction::forward);
@@ -3528,11 +3531,26 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     activeBreakContHandler->UpdateForwAndRevBlocks(bodyDiff);
     PopBreakContStmtHandler();
 
-    // Increment statement in the for-loop is executed for every case
     if (forLoopIncDiff) {
       if (bodyDiff.getStmt_dx()) {
-        bodyDiff.updateStmtDx(utils::PrependAndCreateCompoundStmt(
-            m_Context, bodyDiff.getStmt_dx(), forLoopIncDiff));
+        // If there's a break statement, increment after switch statement in the
+        // forward pass (last increment may underflow but it doesn't affect the
+        // result) else, increment before the switch statement in the forward
+        // pass
+        auto(*addInc)(ASTContext&, Stmt*, Stmt*) =
+            m_HasBreakStmt ? utils::AppendAndCreateCompoundStmt
+                           : utils::PrependAndCreateCompoundStmt;
+        if (m_HasBreakStmt)
+          // make bodyDiff a compound statement to append forLoopIncDiff
+          bodyDiff.updateStmtDx(clad_compat::CompoundStmt_Create(
+              m_Context,
+              bodyDiff.getStmt_dx() /**/
+              CLAD_COMPAT_CLANG15_CompoundStmt_Create_ExtraParam2(
+                  FPOptionsOverride()),
+              noLoc, noLoc));
+
+        bodyDiff.updateStmtDx(
+            addInc(m_Context, bodyDiff.getStmt_dx(), forLoopIncDiff));
       } else {
         bodyDiff.updateStmtDx(forLoopIncDiff);
       }
@@ -3573,6 +3591,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
   }
 
   StmtDiff ReverseModeVisitor::VisitBreakStmt(const BreakStmt* BS) {
+    m_HasBreakStmt = true;
     beginBlock(direction::forward);
     Stmt* newBS = m_Sema.ActOnBreakStmt(noLoc, getCurrentScope()).get();
     auto* activeBreakContHandler = GetActiveBreakContStmtHandler();
