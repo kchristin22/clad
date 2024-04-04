@@ -273,6 +273,10 @@ namespace clad {
   }
 
   void DiffRequest::UpdateDiffParamsInfo(Sema& semaRef) {
+    // Diff info for pullbacks is generated automatically,
+    // its parameters are not provided by the user.
+    if (Mode == DiffMode::experimental_pullback)
+      return;
     DVI.clear();
     auto& C = semaRef.getASTContext();
     const Expr* diffArgs = Args;
@@ -459,7 +463,11 @@ namespace clad {
     // Case 2)
     // Check if the provided literal can be evaluated as an integral value.
     llvm::APSInt intValue;
-    if (clad_compat::Expr_EvaluateAsInt(E, intValue, C)) {
+    Expr::EvalResult res;
+    Expr::SideEffectsKind AllowSideEffects =
+        Expr::SideEffectsKind::SE_NoSideEffects;
+    if (E->EvaluateAsInt(res, C, AllowSideEffects)) {
+      intValue = res.Val.getInt();
       DiffInputVarInfo dVarInfo;
       auto idx = intValue.getExtValue();
       // If we are differentiating a call operator that have no parameters, then

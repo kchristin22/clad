@@ -1,7 +1,6 @@
 // RUN: %cladclang %s -I%S/../../include -std=c++17 -oSwitchInit.out 2>&1 -lstdc++ -lm | FileCheck %s
 // RUN: ./SwitchInit.out | FileCheck -check-prefix=CHECK-EXEC %s
 //CHECK-NOT: {{.*error|warning|note:.*}}
-// XFAIL: target={{i586.*}}
 
 #include "clad/Differentiator/Differentiator.h"
 
@@ -17,13 +16,13 @@ double fn1(double i, double j) {
   return res;
 }
 
-// CHECK: void fn1_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) {
+// CHECK: void fn1_grad(double i, double j, double *_d_i, double *_d_j) {
 // CHECK-NEXT:     double _d_res = 0;
 // CHECK-NEXT:     int _d_count = 0;
 // CHECK-NEXT:     int count = 0;
 // CHECK-NEXT:     int _cond0;
 // CHECK-NEXT:     double _t0;
-// CHECK-NEXT:     clad::tape<unsigned long> _t1 = {};
+// CHECK-NEXT:     clad::tape<unsigned {{int|long}}> _t1 = {};
 // CHECK-NEXT:     double _t2;
 // CHECK-NEXT:     double _t3;
 // CHECK-NEXT:     double _t4;
@@ -38,7 +37,7 @@ double fn1(double i, double j) {
 // CHECK-NEXT:                 _t0 = res;
 // CHECK-NEXT:             }
 // CHECK-NEXT:             {
-// CHECK-NEXT:                 clad::push(_t1, 1UL);
+// CHECK-NEXT:                 clad::push(_t1, {{1U|1UL}});
 // CHECK-NEXT:                 break;
 // CHECK-NEXT:             }
 // CHECK-NEXT:             {
@@ -58,7 +57,7 @@ double fn1(double i, double j) {
 // CHECK-NEXT:                 res += i * i * j * j;
 // CHECK-NEXT:                 _t4 = res;
 // CHECK-NEXT:             }
-// CHECK-NEXT:             clad::push(_t1, 2UL);
+// CHECK-NEXT:             clad::push(_t1, {{2U|2UL}});
 // CHECK-NEXT:         }
 // CHECK-NEXT:     }
 // CHECK-NEXT:     goto _label0;
@@ -66,16 +65,16 @@ double fn1(double i, double j) {
 // CHECK-NEXT:     _d_res += 1;
 // CHECK-NEXT:     {
 // CHECK-NEXT:         switch (clad::pop(_t1)) {
-// CHECK-NEXT:           case 2UL:
+// CHECK-NEXT:           case {{2U|2UL}}:
 // CHECK-NEXT:             ;
 // CHECK-NEXT:             {
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                     res = _t4;
 // CHECK-NEXT:                     double _r_d3 = _d_res;
-// CHECK-NEXT:                     * _d_i += _r_d3 * j * j * i;
-// CHECK-NEXT:                     * _d_i += i * _r_d3 * j * j;
-// CHECK-NEXT:                     * _d_j += i * i * _r_d3 * j;
-// CHECK-NEXT:                     * _d_j += i * i * j * _r_d3;
+// CHECK-NEXT:                     *_d_i += _r_d3 * j * j * i;
+// CHECK-NEXT:                     *_d_i += i * _r_d3 * j * j;
+// CHECK-NEXT:                     *_d_j += i * i * _r_d3 * j;
+// CHECK-NEXT:                     *_d_j += i * i * j * _r_d3;
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                 if (_cond0 != 0 && _cond0 != 1 && _cond0 != 2)
 // CHECK-NEXT:                     break;
@@ -85,8 +84,8 @@ double fn1(double i, double j) {
 // CHECK-NEXT:                     {
 // CHECK-NEXT:                         res = _t3;
 // CHECK-NEXT:                         double _r_d2 = _d_res;
-// CHECK-NEXT:                         * _d_j += _r_d2 * j;
-// CHECK-NEXT:                         * _d_j += j * _r_d2;
+// CHECK-NEXT:                         *_d_j += _r_d2 * j;
+// CHECK-NEXT:                         *_d_j += j * _r_d2;
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                     if (2 == _cond0)
 // CHECK-NEXT:                         break;
@@ -96,20 +95,20 @@ double fn1(double i, double j) {
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                     res = _t2;
 // CHECK-NEXT:                     double _r_d1 = _d_res;
-// CHECK-NEXT:                     * _d_i += _r_d1 * i;
-// CHECK-NEXT:                     * _d_i += i * _r_d1;
+// CHECK-NEXT:                     *_d_i += _r_d1 * i;
+// CHECK-NEXT:                     *_d_i += i * _r_d1;
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                 if (1 == _cond0)
 // CHECK-NEXT:                     break;
 // CHECK-NEXT:             }
-// CHECK-NEXT:           case 1UL:
+// CHECK-NEXT:           case {{1U|1UL}}:
 // CHECK-NEXT:             ;
 // CHECK-NEXT:             {
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                     res = _t0;
 // CHECK-NEXT:                     double _r_d0 = _d_res;
-// CHECK-NEXT:                     * _d_i += _r_d0 * j;
-// CHECK-NEXT:                     * _d_j += i * _r_d0;
+// CHECK-NEXT:                     *_d_i += _r_d0 * j;
+// CHECK-NEXT:                     *_d_j += i * _r_d0;
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                 if (0 == _cond0)
 // CHECK-NEXT:                     break;

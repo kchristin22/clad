@@ -4,23 +4,21 @@
 // RUN: ./Arrays.out | FileCheck -check-prefix=CHECK-EXEC %s
 
 // CHECK-NOT: {{.*error|warning|note:.*}}
-// XFAIL: target={{i586.*}}
 
 #include "clad/Differentiator/Differentiator.h"
 
 double f(double i, double j[2]) { return i * j[0] * j[1]; }
-// CHECK: void f_hessian(double i, double j[2], clad::array_ref<double> hessianMatrix) {
-// CHECK-NEXT:     f_darg0_grad(i, j, hessianMatrix.slice(0UL, 1UL), hessianMatrix.slice(1UL, 2UL));
-// CHECK-NEXT:     f_darg1_0_grad(i, j, hessianMatrix.slice(3UL, 1UL), hessianMatrix.slice(4UL, 2UL));
-// CHECK-NEXT:     f_darg1_1_grad(i, j, hessianMatrix.slice(6UL, 1UL), hessianMatrix.slice(7UL, 2UL));
+// CHECK: void f_hessian(double i, double j[2], double *hessianMatrix) {
+// CHECK-NEXT:     f_darg0_grad(i, j, hessianMatrix + {{0U|0UL}}, hessianMatrix + {{1U|1UL}});
+// CHECK-NEXT:     f_darg1_0_grad(i, j, hessianMatrix + {{3U|3UL}}, hessianMatrix + {{4U|4UL}});
+// CHECK-NEXT:     f_darg1_1_grad(i, j, hessianMatrix + {{6U|6UL}}, hessianMatrix + {{7U|7UL}});
 // CHECK-NEXT: }
 
 double g(double i, double j[2]) { return i * (j[0] + j[1]); }
-
-// CHECK: void g_hessian(double i, double j[2], clad::array_ref<double> hessianMatrix) {
-// CHECK-NEXT:   g_darg0_grad(i, j, hessianMatrix.slice(0UL, 1UL), hessianMatrix.slice(1UL, 2UL));
-// CHECK-NEXT:   g_darg1_0_grad(i, j, hessianMatrix.slice(3UL, 1UL), hessianMatrix.slice(4UL, 2UL));
-// CHECK-NEXT:   g_darg1_1_grad(i, j, hessianMatrix.slice(6UL, 1UL), hessianMatrix.slice(7UL, 2UL));
+// CHECK: void g_hessian(double i, double j[2], double *hessianMatrix) {
+// CHECK-NEXT:   g_darg0_grad(i, j, hessianMatrix + {{0U|0UL}}, hessianMatrix + {{1U|1UL}});
+// CHECK-NEXT:   g_darg1_0_grad(i, j, hessianMatrix + {{3U|3UL}}, hessianMatrix + {{4U|4UL}});
+// CHECK-NEXT:   g_darg1_1_grad(i, j, hessianMatrix + {{6U|6UL}}, hessianMatrix + {{7U|7UL}});
 // CHECK-NEXT: }
 
 #define TEST(var, i, j)                                                        \

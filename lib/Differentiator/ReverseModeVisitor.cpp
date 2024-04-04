@@ -126,13 +126,13 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     // Account for the this pointer.
     if (isa<CXXMethodDecl>(m_Function) && !utils::IsStaticMethod(m_Function))
       ++numOfDerivativeParams;
-    // All output parameters will be of type `clad::array_ref<void>`. These
+    // All output parameters will be of type `void*`. These
     // parameters will be casted to correct type before the call to the actual
     // derived function.
     // We require each output parameter to be of same type in the overloaded
     // derived function due to limitations of generating the exact derived
     // function type at the compile-time (without clad plugin help).
-    QualType outputParamType = GetCladArrayRefOfType(m_Context.VoidTy);
+    QualType outputParamType = m_Context.getPointerType(m_Context.VoidTy);
 
     llvm::SmallVector<QualType, 16> paramTypes;
 
@@ -216,10 +216,16 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
          ++i) {
       auto* overloadParam = overloadParams[i];
       auto* gradientParam = gradientParams[i];
+      TypeSourceInfo* typeInfo =
+          m_Context.getTrivialTypeSourceInfo(gradientParam->getType());
+      SourceLocation fakeLoc = utils::GetValidSLoc(m_Sema);
+      auto* init = m_Sema
+                       .BuildCStyleCastExpr(fakeLoc, typeInfo, fakeLoc,
+                                            BuildDeclRef(overloadParam))
+                       .get();
 
-      auto* gradientVD =
-          BuildGlobalVarDecl(gradientParam->getType(), gradientParam->getName(),
-                             BuildDeclRef(overloadParam));
+      auto* gradientVD = BuildGlobalVarDecl(gradientParam->getType(),
+                                            gradientParam->getName(), init);
       callArgs.push_back(BuildDeclRef(gradientVD));
       addToCurrentBlock(BuildDeclStmt(gradientVD));
     }
@@ -465,8 +471,11 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     assert(m_Function && "Must not be null.");
 
     DiffParams args{};
-    std::copy(FD->param_begin(), FD->param_end(), std::back_inserter(args));
-
+    if (!request.DVI.empty())
+      for (const auto& dParam : request.DVI)
+        args.push_back(dParam.param);
+    else
+      std::copy(FD->param_begin(), FD->param_end(), std::back_inserter(args));
 #ifndef NDEBUG
     bool isStaticMethod = utils::IsStaticMethod(FD);
     assert((!args.empty() || !isStaticMethod) &&
@@ -629,29 +638,11 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     const auto* originalFnType =
         dyn_cast<FunctionProtoType>(m_Function->getType());
 
-    // Extract Pointer from Clad Array Ref
-    llvm::SmallVector<VarDecl*, 8> cladRefParams;
-    for (unsigned i = 0; i < numParams; i++) {
-      QualType paramType = origParams[i]->getOriginalType();
-      if (paramType->isRealType()) {
-        cladRefParams.push_back(nullptr);
-        continue;
-      }
-
-      paramType = m_Context.getPointerType(
-          QualType(paramType->getPointeeOrArrayElementType(), 0));
-      auto* arrayRefNameExpr = BuildDeclRef(paramsRef[numParams + i]);
-      auto* getPointerExpr = BuildCallExprToMemFn(arrayRefNameExpr, "ptr", {});
-      auto* arrayRefToArrayStmt = BuildVarDecl(
-          paramType, "d_" + paramsRef[i]->getNameAsString(), getPointerExpr);
-      addToCurrentBlock(BuildDeclStmt(arrayRefToArrayStmt), direction::forward);
-      cladRefParams.push_back(arrayRefToArrayStmt);
-    }
     // Prepare Arguments and Parameters to enzyme_autodiff
     llvm::SmallVector<Expr*, 16> enzymeArgs;
     llvm::SmallVector<ParmVarDecl*, 16> enzymeParams;
     llvm::SmallVector<ParmVarDecl*, 16> enzymeRealParams;
-    llvm::SmallVector<ParmVarDecl*, 16> enzymeRealParamsRef;
+    llvm::SmallVector<ParmVarDecl*, 16> enzymeRealParamsDerived;
 
     // First add the function itself as a parameter/argument
     enzymeArgs.push_back(BuildDeclRef(const_cast<FunctionDecl*>(m_Function)));
@@ -667,23 +658,19 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       enzymeParams.push_back(m_Sema.BuildParmVarDeclForTypedef(
           fdDeclContext, noLoc, paramsRef[i]->getType()));
 
-      // If the original parameter is not of array/pointer type, then we don't
-      // have to extract its pointer from clad array_ref and add it to the
-      // enzyme parameters, so we can skip the rest of the code
-      if (!cladRefParams[i]) {
-        // If original parameter is of a differentiable real type(but not
-        // array/pointer), then add it to the list of params whose gradient must
-        // be extracted later from the EnzymeGradient structure
-        if (paramsRef[i]->getOriginalType()->isRealFloatingType()) {
-          enzymeRealParams.push_back(paramsRef[i]);
-          enzymeRealParamsRef.push_back(paramsRef[numParams + i]);
-        }
-        continue;
+      QualType paramType = origParams[i]->getOriginalType();
+      // If original parameter is of a differentiable real type(but not
+      // array/pointer), then add it to the list of params whose gradient must
+      // be extracted later from the EnzymeGradient structure
+      if (paramType->isRealFloatingType()) {
+        enzymeRealParams.push_back(paramsRef[i]);
+        enzymeRealParamsDerived.push_back(paramsRef[numParams + i]);
+      } else if (utils::isArrayOrPointerType(paramType)) {
+        // Add the corresponding array/pointer variable
+        enzymeArgs.push_back(BuildDeclRef(paramsRef[numParams + i]));
+        enzymeParams.push_back(m_Sema.BuildParmVarDeclForTypedef(
+            fdDeclContext, noLoc, paramsRef[numParams + i]->getType()));
       }
-      // Then add the corresponding clad array ref pointer variable
-      enzymeArgs.push_back(BuildDeclRef(cladRefParams[i]));
-      enzymeParams.push_back(m_Sema.BuildParmVarDeclForTypedef(
-          fdDeclContext, noLoc, cladRefParams[i]->getType()));
     }
 
     llvm::SmallVector<QualType, 16> enzymeParamsType;
@@ -726,7 +713,8 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       addToCurrentBlock(BuildDeclStmt(gradDeclStmt), direction::forward);
 
       for (unsigned i = 0; i < enzymeRealParams.size(); i++) {
-        auto* LHSExpr = BuildOp(UO_Deref, BuildDeclRef(enzymeRealParamsRef[i]));
+        auto* LHSExpr =
+            BuildOp(UO_Deref, BuildDeclRef(enzymeRealParamsDerived[i]));
 
         auto* ME = utils::BuildMemberExpr(m_Sema, getCurrentScope(),
                                           BuildDeclRef(gradDeclStmt), "d_arr");
@@ -1327,6 +1315,8 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       // Add it to the body statements.
       addToCurrentBlock(add_assign, direction::reverse);
     }
+    if (m_ExternalSource)
+      m_ExternalSource->ActAfterProcessingArraySubscriptExpr(valueForRevSweep);
     return StmtDiff(cloned, result, forwSweepDerivative, valueForRevSweep);
   }
 
@@ -1522,9 +1512,6 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     // statements there later.
     std::size_t insertionPoint = getCurrentBlock(direction::reverse).size();
 
-    // FIXME: We should add instructions for handling non-differentiable
-    // arguments. Currently we are implicitly assuming function call only
-    // contains differentiable arguments.
     bool isCXXOperatorCall = isa<CXXOperatorCallExpr>(CE);
 
     for (std::size_t i = static_cast<std::size_t>(isCXXOperatorCall),
@@ -1742,9 +1729,9 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
                "corresponding dfdx().");
       }
 
-      DerivedCallArgs.insert(DerivedCallArgs.end(),
-                             DerivedCallOutputArgs.begin(),
-                             DerivedCallOutputArgs.end());
+      for (Expr* arg : DerivedCallOutputArgs)
+        if (arg)
+          DerivedCallArgs.push_back(arg);
       pullbackCallArgs = DerivedCallArgs;
 
       if (pullback)
@@ -1795,6 +1782,10 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
         // Silence diag outputs in nested derivation process.
         pullbackRequest.VerboseDiags = false;
         pullbackRequest.EnableTBRAnalysis = enableTBR;
+        bool isaMethod = isa<CXXMethodDecl>(FD);
+        for (size_t i = 0, e = FD->getNumParams(); i < e; ++i)
+          if (DerivedCallOutputArgs[i + isaMethod])
+            pullbackRequest.DVI.push_back(FD->getParamDecl(i));
         FunctionDecl* pullbackFD = plugin::ProcessDiffRequest(m_CladPlugin, pullbackRequest);
         // Clad failed to derive it.
         // FIXME: Add support for reference arguments to the numerical diff. If
@@ -2269,10 +2260,14 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
           std::string DRE_str = DRE->getDecl()->getNameAsString();
 
           llvm::APSInt intIdx;
+          Expr::EvalResult res;
+          Expr::SideEffectsKind AllowSideEffects =
+              Expr::SideEffectsKind::SE_NoSideEffects;
           auto isIdxValid =
-              clad_compat::Expr_EvaluateAsInt(ASE->getIdx(), intIdx, m_Context);
+              ASE->getIdx()->EvaluateAsInt(res, m_Context, AllowSideEffects);
 
           if (DRE_str == outputArrayStr && isIdxValid) {
+            intIdx = res.Val.getInt();
             if (isVectorValued) {
               outputArrayCursor = intIdx.getExtValue();
 
@@ -3449,8 +3444,8 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     Expr* lhsClone = (CS->getLHS() ? Clone(CS->getLHS()) : nullptr);
     Expr* rhsClone = (CS->getRHS() ? Clone(CS->getRHS()) : nullptr);
 
-    auto* newSC = clad_compat::CaseStmt_Create(m_Sema.getASTContext(), lhsClone,
-                                               rhsClone, noLoc, noLoc, noLoc);
+    auto* newSC = CaseStmt::Create(m_Sema.getASTContext(), lhsClone, rhsClone,
+                                   noLoc, noLoc, noLoc);
 
     Expr* ifCond = BuildOp(BinaryOperatorKind::BO_EQ, newSC->getLHS(),
                            SSData->switchStmtCond);
@@ -3632,8 +3627,8 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
   CaseStmt* ReverseModeVisitor::BreakContStmtHandler::GetNextCFCaseStmt() {
     ++m_CaseCounter;
     auto* counterLiteral = CreateSizeTLiteralExpr(m_CaseCounter);
-    CaseStmt* CS = clad_compat::CaseStmt_Create(m_RMV.m_Context, counterLiteral,
-                                                nullptr, noLoc, noLoc, noLoc);
+    CaseStmt* CS = CaseStmt::Create(m_RMV.m_Context, counterLiteral, nullptr,
+                                    noLoc, noLoc, noLoc);
 
     // Initialise switch case statements with null statement because it is
     // necessary for switch case statements to have a substatement but it
@@ -3806,7 +3801,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     // derivative variables should always be of non-const type.
     xValueType.removeLocalConst();
     QualType nonRefXValueType = xValueType.getNonReferenceType();
-    return GetCladArrayRefOfType(nonRefXValueType);
+    return m_Context.getPointerType(nonRefXValueType);
   }
 
   StmtDiff ReverseModeVisitor::VisitCXXStaticCastExpr(
@@ -3833,7 +3828,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
   clang::QualType ReverseModeVisitor::ComputeParamType(clang::QualType T) {
       QualType TValueType = utils::GetValueType(T);
       TValueType.removeLocalConst();
-      return GetCladArrayRefOfType(TValueType);
+      return m_Context.getPointerType(TValueType);
   }
 
   llvm::SmallVector<clang::QualType, 8>
@@ -3866,8 +3861,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       if (const auto* MD = dyn_cast<CXXMethodDecl>(m_Function)) {
         const CXXRecordDecl* RD = MD->getParent();
         if (MD->isInstance() && !RD->isLambda()) {
-          QualType thisType =
-              clad_compat::CXXMethodDecl_getThisType(m_Sema, MD);
+          QualType thisType = MD->getThisType();
           paramTypes.push_back(
               GetParameterDerivativeType(effectiveReturnType, thisType));
         }
@@ -3953,7 +3947,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
           if (utils::isArrayOrPointerType(PVD->getType())) {
             m_Variables[*it] = (Expr*)BuildDeclRef(dPVD);
           } else {
-            QualType valueType = DetermineCladArrayValueType(dPVD->getType());
+            QualType valueType = dPVD->getType()->getPointeeType();
             m_Variables[*it] = BuildOp(UO_Deref, BuildDeclRef(dPVD),
                                        m_Function->getLocation());
             // Add additional paranthesis if derivative is of record type

@@ -92,8 +92,8 @@ ReverseModeForwPassVisitor::GetParameterDerivativeType(QualType yType,
   xValueType.removeLocalConst();
   QualType nonRefXValueType = xValueType.getNonReferenceType();
   if (nonRefXValueType->isRealType())
-    return GetCladArrayRefOfType(yType);
-  return GetCladArrayRefOfType(nonRefXValueType);
+    return m_Context.getPointerType(yType);
+  return m_Context.getPointerType(nonRefXValueType);
 }
 
 llvm::SmallVector<clang::QualType, 8>
@@ -109,7 +109,7 @@ ReverseModeForwPassVisitor::ComputeParamTypes(const DiffParams& diffParams) {
   if (const auto* MD = dyn_cast<CXXMethodDecl>(m_Function)) {
     const CXXRecordDecl* RD = MD->getParent();
     if (MD->isInstance() && !RD->isLambda()) {
-      QualType thisType = clad_compat::CXXMethodDecl_getThisType(m_Sema, MD);
+      QualType thisType = MD->getThisType();
       paramTypes.push_back(
           GetParameterDerivativeType(effectiveReturnType, thisType));
     }

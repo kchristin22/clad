@@ -36,16 +36,14 @@ namespace clad {
   static const StringLiteral* CreateStringLiteral(ASTContext& C,
                                                   std::string str) {
     QualType CharTyConst = C.CharTy.withConst();
-    QualType StrTy =
-        clad_compat::getConstantArrayType(C, CharTyConst,
-                                          llvm::APInt(/*numBits=*/32,
-                                                      str.size() + 1),
-                                          /*SizeExpr=*/nullptr,
-                                          /*ASM=*/ArrayType::Normal,
-                                          /*IndexTypeQuals*/ 0);
-    const StringLiteral* SL =
-        StringLiteral::Create(C, str, /*Kind=*/clad_compat::StringKind_Ordinary,
-                              /*Pascal=*/false, StrTy, noLoc);
+    QualType StrTy = clad_compat::getConstantArrayType(
+        C, CharTyConst, llvm::APInt(/*numBits=*/32, str.size() + 1),
+        /*SizeExpr=*/nullptr,
+        /*ASM=*/clad_compat::ArraySizeModifier_Normal,
+        /*IndexTypeQuals*/ 0);
+    const StringLiteral* SL = StringLiteral::Create(
+        C, str, /*Kind=*/clad_compat::StringLiteralKind_Ordinary,
+        /*Pascal=*/false, StrTy, noLoc);
     return SL;
   }
 
@@ -216,7 +214,7 @@ namespace clad {
                    std::begin(paramTypes),
                    [](const ParmVarDecl* PVD) { return PVD->getType(); });
 
-    paramTypes.back() = GetCladArrayRefOfType(m_Function->getReturnType());
+    paramTypes.back() = m_Context.getPointerType(m_Function->getReturnType());
 
     auto originalFnProtoType = cast<FunctionProtoType>(m_Function->getType());
     QualType hessianFunctionType = m_Context.getFunctionType(
@@ -341,22 +339,17 @@ namespace clad {
 
       size_t columnIndex = 0;
       // Create Expr parameters for each independent arg in the CallExpr
-      for (size_t j = 0, n = IndependentArgsSize.size(); j < n; j++) {
+      for (size_t indArgSize : IndependentArgsSize) {
         llvm::APInt offsetValue(size_type_bits,
                                 HessianMatrixStartIndex + columnIndex);
         // Create the offset argument.
-        auto OffsetArg =
+        Expr* OffsetArg =
             IntegerLiteral::Create(m_Context, offsetValue, size_type, noLoc);
-        llvm::APInt sizeValue(size_type_bits, IndependentArgsSize[j]);
-        // Create the size argument.
-        auto SizeArg =
-            IntegerLiteral::Create(m_Context, sizeValue, size_type, noLoc);
-        SmallVector<Expr*, 2> Args({OffsetArg, SizeArg});
-        // Create the hessianMatrix.slice(OffsetArg, SizeArg) expression.
-        auto SliceExpr = BuildArrayRefSliceExpr(m_Result, Args);
+        // Create the hessianMatrix + OffsetArg expression.
+        Expr* SliceExpr = BuildOp(BO_Add, m_Result, OffsetArg);
 
         DeclRefToParams.push_back(SliceExpr);
-        columnIndex += IndependentArgsSize[j];
+        columnIndex += indArgSize;
       }
       Expr* call = BuildCallExprToFunction(secDerivFuncs[i], DeclRefToParams);
       CompStmtSave.push_back(call);
