@@ -1275,11 +1275,11 @@ double fn16(double i, double j) {
 // CHECK-NEXT:     goto _label0;
 // CHECK-NEXT:   _label0:
 // CHECK-NEXT:     _d_res += 1;
-// CHECK-NEXT:     for (; _t0; _t0--)
+// CHECK-NEXT:     for (; _t0; _t0--) {
+// CHECK-NEXT:         --ii;
 // CHECK-NEXT:         switch (clad::pop(_t4)) {
 // CHECK-NEXT:           case {{3U|3UL}}:
 // CHECK-NEXT:             ;
-// CHECK-NEXT:             --ii;
 // CHECK-NEXT:             {
 // CHECK-NEXT:                 res = clad::pop(_t8);
 // CHECK-NEXT:                 double _r_d2 = _d_res;
@@ -1306,6 +1306,7 @@ double fn16(double i, double j) {
 // CHECK-NEXT:                 }
 // CHECK-NEXT:             }
 // CHECK-NEXT:         }
+// CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 double fn17(double i, double j) {
@@ -1388,11 +1389,11 @@ double fn17(double i, double j) {
 // CHECK-NEXT:     goto _label0;
 // CHECK-NEXT:   _label0:
 // CHECK-NEXT:     _d_res += 1;
-// CHECK-NEXT:     for (; _t0; _t0--)
+// CHECK-NEXT:     for (; _t0; _t0--) {
+// CHECK-NEXT:         --ii;
 // CHECK-NEXT:         switch (clad::pop(_t4)) {
 // CHECK-NEXT:           case {{2U|2UL}}:
 // CHECK-NEXT:             ;
-// CHECK-NEXT:             --ii;
 // CHECK-NEXT:             {
 // CHECK-NEXT:                 while (clad::back(_t5))
 // CHECK-NEXT:                     {
@@ -1434,6 +1435,7 @@ double fn17(double i, double j) {
 // CHECK-NEXT:                 jj = clad::pop(_t1);
 // CHECK-NEXT:             }
 // CHECK-NEXT:         }
+// CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 double fn18(double i, double j) {
@@ -1496,11 +1498,11 @@ double fn18(double i, double j) {
 // CHECK-NEXT:     goto _label0;
 // CHECK-NEXT:   _label0:
 // CHECK-NEXT:     _d_res += 1;
-// CHECK-NEXT:     for (; _t0; _t0--)
+// CHECK-NEXT:     for (; _t0; _t0--) {
+// CHECK-NEXT:         --counter;
 // CHECK-NEXT:         switch (clad::pop(_t6)) {
 // CHECK-NEXT:           case {{3U|3UL}}:
 // CHECK-NEXT:             ;
-// CHECK-NEXT:             --counter;
 // CHECK-NEXT:             if (clad::pop(_t2)) {
 // CHECK-NEXT:                 res = clad::pop(_t3);
 // CHECK-NEXT:                 double _r_d0 = _d_res;
