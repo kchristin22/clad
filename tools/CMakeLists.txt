@@ -47,11 +47,11 @@ if (NOT CLAD_BUILD_STATIC_ONLY)
     endwhile()
   endif(LLVM_LINK_LLVM_DYLIB)
 
-  add_llvm_loadable_module(
-    clad ${CLAD_PLUGIN_SRC} DISABLE_LLVM_LINK_LLVM_DYLIB PLUGIN_TOOL clang
-    )
-
-  target_link_libraries(clad PRIVATE ${link_libs})
+  add_llvm_loadable_module(clad ${CLAD_PLUGIN_SRC} DISABLE_LLVM_LINK_LLVM_DYLIB PLUGIN_TOOL clang)
+  if (CUDA_FOUND)
+    set (cuda_flags -L/usr/local/cuda/lib64 -lcudart_static -ldl -lrt -pthread -lm -lstdc++ -lcuda -lnvrtc)
+  endif()
+  target_link_libraries(clad PRIVATE ${link_libs} ${cuda_flags})
 
   # Add Enzyme as a backend.
   if (CLAD_ENABLE_ENZYME_BACKEND)

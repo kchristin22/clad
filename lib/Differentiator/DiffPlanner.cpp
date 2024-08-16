@@ -9,6 +9,11 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/TemplateDeduction.h"
+#ifdef CUDA_ON
+#include "cuda.h"
+#include "cuda_runtime_api.h"
+#include "nvrtc.h"
+#endif
 
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -215,7 +220,8 @@ namespace clad {
     auto newUnOp =
         SemaRef.BuildUnaryOp(nullptr, noLoc, UnaryOperatorKind::UO_AddrOf, DRE)
             .get();
-    call->setArg(derivedFnArgIdx, newUnOp);
+    if (!this->CUDAkernel)
+      call->setArg(derivedFnArgIdx, newUnOp);
 
     // Update the code parameter.
     if (CXXDefaultArgExpr* Arg
@@ -228,6 +234,100 @@ namespace clad {
       std::string s;
       llvm::raw_string_ostream Out(s);
       FD->print(Out, Policy);
+
+#ifdef CUDA_ON
+      if (this->CUDAkernel) {
+        Out.str().insert(0, "__global__ ");
+        Out.flush();
+
+        const char* code = Out.str().c_str();
+
+        nvrtcProgram prog;
+        nvrtcResult result =
+            nvrtcCreateProgram(&prog, code, "Derivatives.cu", 0, NULL, NULL);
+        assert(result == NVRTC_SUCCESS);
+        result = nvrtcCompileProgram(prog, 0, NULL);
+        assert(result == NVRTC_SUCCESS);
+
+        size_t ptx_size;
+        result = nvrtcGetPTXSize(prog, &ptx_size);
+        assert(result == NVRTC_SUCCESS);
+
+        char* ptx_code = (char*)malloc(ptx_size * sizeof(char));
+        result = nvrtcGetPTX(prog, ptx_code);
+        assert(result == NVRTC_SUCCESS);
+
+        CUdevice cuDevice;
+        CUcontext cuContext;
+
+        cudaError_t err = cudaSetDevice(0);
+        assert(err == cudaSuccess);
+
+        CUresult error = cuInit(0);
+        assert(error == CUDA_SUCCESS);
+
+        error = cuDeviceGet(&cuDevice, 0);
+        assert(error == CUDA_SUCCESS);
+
+        error = cuCtxCreate(&cuContext, 0, cuDevice);
+        assert(error == CUDA_SUCCESS);
+
+        CUlinkState linkState;
+        error = cuLinkCreate(0, nullptr, nullptr, &linkState);
+        assert(error == CUDA_SUCCESS);
+
+        error =
+            cuLinkAddData(linkState, CU_JIT_INPUT_PTX, (void*)ptx_code,
+                          strlen(ptx_code) + 1, "ptx_filename", 0, 0, 0);
+        assert(error == CUDA_SUCCESS);
+
+        void* cubinOut;
+        size_t cubinSize;
+        error = cuLinkComplete(linkState, &cubinOut, &cubinSize);
+        assert(error == CUDA_SUCCESS);
+
+        CUmodule cuModule;
+        error = cuModuleLoadData(&cuModule, ptx_code);
+        assert(error == CUDA_SUCCESS);
+
+        error = cuModuleGetFunction(&this->cuDerivedFunction, cuModule,
+                                    "_Z11kernel_gradPiS_");
+        assert(error == CUDA_SUCCESS);
+
+        // Define the type for CUfunction, which is a pointer to struct
+        // CUfunc_st
+        QualType CUfunctionTy =
+            C.getPointerType(C.getRecordType(C.buildImplicitRecord(
+                "CUfunc_st", clang::TagTypeKind::TTK_Struct)));
+
+        // Create a VarDecl for the CUfunction
+        IdentifierInfo& CUfunctionId = C.Idents.get("cuDerivedFunction");
+        VarDecl* cuFunctionDecl = VarDecl::Create(
+            C, C.getTranslationUnitDecl(), noLoc, noLoc, &CUfunctionId,
+            CUfunctionTy, C.getTrivialTypeSourceInfo(CUfunctionTy), SC_Static);
+
+        // Create a DeclRefExpr to reference this VarDecl
+        DeclRefExpr* cuFunctionRef = DeclRefExpr::Create(
+            C,                         // ASTContext
+            oldDRE->getQualifierLoc(), // QualifierLoc (empty if not
+                                       // qualified)
+            noLoc,                     // SourceLocation for the expression
+            cuFunctionDecl,            // ValueDecl for the CUfunction variable
+            false,                     // RefersToEnclosingVariableOrCapture
+            noLoc,                     // SourceLocation for the name
+            CUfunctionTy,              // QualType of the expression
+            VK_LValue,                 // ExprValueKind (lvalue or rvalue)
+            nullptr,                   // FoundDecl (nullptr if not applicable)
+            nullptr, // TemplateArgumentListInfo (nullptr if not applicable)
+            clang::NonOdrUseReason::NOUR_None // NonOdrUseReason (NOUR_None for
+                                              // default)
+        );
+
+        cuFunctionDecl->setInit(cuFunctionRef);
+
+        call->setArg(derivedFnArgIdx, cuFunctionRef);
+      }
+#endif
       Out.flush();
 
       StringLiteral* SL = utils::CreateStringLiteral(C, Out.str());

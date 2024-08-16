@@ -6,6 +6,10 @@
 #include "clad/Differentiator/DiffMode.h"
 #include "clad/Differentiator/DynamicGraph.h"
 #include "clad/Differentiator/ParseDiffArgsTypes.h"
+#ifdef CUDA_ON
+#include "cuda.h"
+#include "nvrtc.h"
+#endif
 
 namespace clang {
 class CallExpr;
@@ -57,6 +61,9 @@ public:
   bool EnableTBRAnalysis = false;
   /// Records if the original function to derive is a global CUDA kernel
   bool CUDAkernel = false;
+  #ifdef CUDA_ON
+  CUfunction cuDerivedFunction;
+  #endif
   /// Puts the derived function and its code in the diff call
   void updateCall(clang::FunctionDecl* FD, clang::FunctionDecl* OverloadedFD,
                   clang::Sema& SemaRef);

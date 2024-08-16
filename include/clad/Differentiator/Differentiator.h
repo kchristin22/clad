@@ -181,26 +181,42 @@ inline CUDA_HOST_DEVICE unsigned int GetLength(const char* code) {
     #endif
 
   public:
-    CUDA_HOST_DEVICE CladFunction(CladFunctionType f, const char* code,
-                                  bool CUDAkernel = false,
-                                  FunctorType* functor = nullptr)
-        : m_CUDAkernel(CUDAkernel),
-          m_Functor(functor) {
+    // CUDA_HOST_DEVICE CladFunction(CladFunctionType f, const char* code,
+    //                               bool CUDAkernel = false,
+    //                               FunctorType* functor = nullptr)
+    //     : m_CUDAkernel(CUDAkernel),
+    //       m_Functor(functor) {
+    //   assert(f && "Must pass a non-0 argument.");
+    //   if (size_t length = GetLength(code)) {
+    //     m_Function = f;
+    //     char* temp;
+    //     temp = (char*)malloc(length + 1);
+    //     m_Code = temp;
+    //     while ((*temp++ = *code++));
+    //   } else {
+    //     // clad did not place the derivative in this object. This can happen
+    //     // upon error of if clad was disabled. Diagnose.
+    //     printf("clad failed to place the generated derivative in the object\n");
+    //     printf("Make sure calls to clad are within a #pragma clad ON region\n");
+
+    //     // Invalidate the placeholders.
+    //     m_Function = nullptr;
+    //     m_Code = nullptr;
+    //   }
+    // }
+
+    #ifdef __CUDACC__
+    CladFunction(CUfunction f, const char* code, bool CUDAkernel = true,
+                 FunctorType* functor = nullptr)
+        : m_CUDAkernel(CUDAkernel), m_Functor(functor) {
       assert(f && "Must pass a non-0 argument.");
       if (size_t length = GetLength(code)) {
-        m_Function = f;
+        cuFunction = f;
         char* temp;
-        if (m_CUDAkernel) {
-          const char* kernel = "__global__ ";
-          temp = (char*)malloc(length + GetLength(kernel) + 1);
-          m_Code = temp;
-          while ((*temp++ = *kernel++));
-          temp--;
-        } else {
-          temp = (char*)malloc(length + 1);
-          m_Code = temp;
-        }
-        while ((*temp++ = *code++));
+        temp = (char*)malloc(length + 1);
+        m_Code = temp;
+        while ((*temp++ = *code++))
+          ;
       } else {
         // clad did not place the derivative in this object. This can happen
         // upon error of if clad was disabled. Diagnose.
@@ -212,6 +228,7 @@ inline CUDA_HOST_DEVICE unsigned int GetLength(const char* code) {
         m_Code = nullptr;
       }
     }
+    #endif
     /// Constructor overload for initializing `m_Functor` when functor
     /// is passed by reference.
     CUDA_HOST_DEVICE
@@ -327,11 +344,13 @@ inline CUDA_HOST_DEVICE unsigned int GetLength(const char* code) {
         printf("Use execute() for non-global CUDA kernels\n");
         return static_cast<return_type_t<F>>(return_type_t<F>());
       }
-
       void* argPtrs[] = {(void*)&args...};
-      CUresult error =
-          cuLaunchKernel(cuFunction, grid.x, grid.y, grid.z, block.x, block.y,
-                          block.z, 0, NULL, argPtrs, NULL);
+
+      cudaError_t error = cudaLaunchKernel((void*)m_Function, grid, block, argPtrs, shared_mem, stream);
+
+      // CUresult error =
+          // cuLaunchKernel(cuFunction, grid.x, grid.y, grid.z, block.x, block.y,
+                          // block.z, 0, NULL, argPtrs, NULL);
       if (error) {
         printf("error in launch: %s\n",
                 cudaGetErrorString((cudaError_t)error));
@@ -492,6 +511,29 @@ inline CUDA_HOST_DEVICE unsigned int GetLength(const char* code) {
           derivedFn, code);
   }
 
+  // /// Generates function which computes gradient of the given function wrt the
+  // /// parameters specified in `args` using reverse mode differentiation.
+  // ///
+  // /// \param[in] fn function to differentiate
+  // /// \param[in] args independent parameters information
+  // /// \returns `CladFunction` object to access the corresponding derived
+  // /// function.
+  // template <unsigned... BitMaskedOpts, typename ArgSpec = const char*,
+  //           typename F, typename DerivedFnType = GradientDerivedFnTraits_t<F>,
+  //           typename = typename std::enable_if<
+  //               !std::is_class<remove_reference_and_pointer_t<F>>::value>::type>
+  // CladFunction<DerivedFnType, ExtractFunctorTraits_t<F>, true> __attribute__((
+  //     annotate("G"))) CUDA_HOST_DEVICE
+  // gradient(F f, ArgSpec args = "", DerivedFnType derivedFn =
+  //              static_cast<DerivedFnType>(nullptr),
+  //          const char* code = "", bool CUDAkernel = false) {
+  //   assert(f && "Must pass in a non-0 argument");
+  //   return CladFunction<DerivedFnType, ExtractFunctorTraits_t<F>, true>(
+  //       derivedFn /* will be replaced by gradient*/, code, CUDAkernel);
+  // }
+
+  #ifdef __CUDACC_
+
   /// Generates function which computes gradient of the given function wrt the
   /// parameters specified in `args` using reverse mode differentiation.
   ///
@@ -505,13 +547,14 @@ inline CUDA_HOST_DEVICE unsigned int GetLength(const char* code) {
                 !std::is_class<remove_reference_and_pointer_t<F>>::value>::type>
   CladFunction<DerivedFnType, ExtractFunctorTraits_t<F>, true> __attribute__((
       annotate("G"))) CUDA_HOST_DEVICE
-  gradient(F f, ArgSpec args = "", DerivedFnType derivedFn =
-               static_cast<DerivedFnType>(nullptr),
+  gradient(F f, ArgSpec args = "",
+           CUfunction derivedFn,
            const char* code = "", bool CUDAkernel = false) {
     assert(f && "Must pass in a non-0 argument");
     return CladFunction<DerivedFnType, ExtractFunctorTraits_t<F>, true>(
         derivedFn /* will be replaced by gradient*/, code, CUDAkernel);
   }
+  #endif
 
   /// Specialization for differentiating functors.
   /// The specialization is needed because objects have to be passed

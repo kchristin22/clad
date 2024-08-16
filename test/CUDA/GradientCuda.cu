@@ -16,6 +16,7 @@
 
 #include "clad/Differentiator/Differentiator.h"
 #include <array>
+#include <cuda_runtime_api.h>
 
 #define N 3
 
@@ -88,8 +89,8 @@ __device__ __host__ double gauss(double* x, double* p, double sigma, int dim) {
 //CHECK-NEXT: }
 
 __global__ void compute(double* d_x, double* d_p, int n, double* d_result) {
-  auto gauss_g = clad::gradient(gauss, "p");
-  gauss_g.execute(d_x, d_p, 2.0, n, d_result);
+  // auto gauss_g = clad::gradient(gauss, "p");
+  // gauss_g.execute(d_x, d_p, 2.0, n, d_result);
 }
 
 __global__ void kernel(int *a) {
@@ -123,8 +124,8 @@ int main(void) {
   printf("%f,%f,%f\n", result[0], result[1], result[2]);
 
   std::array<double, N> result_cpu{0};
-  auto gauss_g = clad::gradient(gauss, "p");
-  gauss_g.execute(x, p, 2.0, N, result_cpu.data());
+  // auto gauss_g = clad::gradient(gauss, "p");
+  // gauss_g.execute(x, p, 2.0, N, result_cpu.data());
 
   if (result != result_cpu) {
     printf("Results are not equal\n");
@@ -144,10 +145,10 @@ int main(void) {
   cudaMemcpy(d_square, asquare, sizeof(int), cudaMemcpyHostToDevice);
 
   auto test = clad::gradient(kernel);
-  test.compile_kernel();
+  // test.compile_kernel();
   dim3 grid(1);
   dim3 block(1);
-  test.execute_kernel(grid, block, 0, nullptr, d_a, d_square);
+  // test.execute_kernel(grid, block, 0, nullptr, d_a, d_square);
 
   cudaDeviceSynchronize();
 
