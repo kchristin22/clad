@@ -48,6 +48,11 @@ jobs:
             os: macos-14
             compiler: clang
             clang-runtime: '17'
+          #Turn on once clang-18 available through Homebrew
+          #- name: osx14-arm-clang-runtime18
+          #  os: macos-14
+          #  compiler: clang
+          #  clang-runtime: '18'
 
           - name: osx13-x86-clang-runtime12
             os: macos-13
@@ -78,6 +83,11 @@ jobs:
             os: macos-13
             compiler: clang
             clang-runtime: '17'
+          #Turn on once clang-18 available through Homebrew
+          #- name: osx13-x86-clang-runtime18
+          #  os: macos-13
+          #  compiler: clang
+          #  clang-runtime: '18'
 
           - name: win2022-msvc-runtime14
             os: windows-2022
@@ -98,6 +108,11 @@ jobs:
             os: windows-2022
             compiler: msvc
             clang-runtime: '17'
+
+          - name: win2022-msvc-runtime18
+            os: windows-2022
+            compiler: msvc
+            clang-runtime: '18'
 
           - name: ubu22-clang15-runtime16-debug
             os: ubuntu-22.04
@@ -442,12 +457,12 @@ jobs:
             extra_packages: 'libtrilinos-kokkos-dev ninja-build'
             extra_cmake_options: '-G Ninja'
 
-          # Оld, still supported versions
+          - name: ubu22-clang16-runtime18
+            os: ubuntu-22.04
+            compiler: clang-16
+            clang-runtime: '18'
 
-          - name: ubu20-gcc9-runtime7
-            os: ubuntu-20.04
-            compiler: gcc-9
-            clang-runtime: '7'
+          # Оld, still supported versions
 
           - name: ubu20-gcc9-runtime8
             os: ubuntu-20.04
@@ -455,11 +470,11 @@ jobs:
             clang-runtime: '8'
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.11
     - name: Save PR Info
@@ -468,7 +483,7 @@ jobs:
         mkdir -p ./pr
         echo ${{ github.event.number }} > ./pr/NR
         echo ${{ github.repository }} > ./pr/REPO
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       if: ${{ matrix.coverage == true }}
       with:
         name: pr
@@ -636,7 +651,7 @@ jobs:
 
     - name: Restore Cache LLVM/Clang runtime build directory (debug_build==true)
       if: ${{ (matrix.debug_build == true) && (runner.os != 'windows') }}
-      uses: actions/cache/restore@v3
+      uses: actions/cache/restore@v4
       id: cache
       with:
         path: |
@@ -667,10 +682,10 @@ jobs:
               -DLLVM_INCLUDE_TESTS=OFF              \
               -DLLVM_INCLUDE_DOCS=OFF               \
               ../llvm
-        cmake --build . --target clang FileCheck llvm-config --parallel ${CPU_COUNT}
+        cmake --build . --target clang FileCheck llvm-config clang-repl --parallel ${CPU_COUNT}
         cd ../../
     - name: Save Cache LLVM/Clang runtime build directory (debug_build==true)
-      uses: actions/cache/save@v3
+      uses: actions/cache/save@v4
       if: ${{ (matrix.debug_build == true) && (runner.os != 'windows') && (steps.cache.outputs.cache-hit != 'true') }}
       with:
         path: |
@@ -917,9 +932,12 @@ jobs:
 
     - name: Upload to codecov.io
       if: ${{ success() && (matrix.coverage == true) }}
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.info
+        fail_ci_if_error: true
+        verbose: true
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Upload report to coverity_scan
       if: ${{ success() && (matrix.coverity == true) }}

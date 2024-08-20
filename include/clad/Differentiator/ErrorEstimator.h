@@ -40,6 +40,8 @@ class ErrorEstimationHandler : public ExternalRMVSource {
   Stmts m_ReverseErrorStmts;
   /// The index expression for emitting final errors for input param errors.
   clang::Expr* m_IdxExpr;
+  /// A map from var decls to their size variables (e.g. `var_size`).
+  std::unordered_map<const clang::VarDecl*, clang::Expr*> m_ArrSizes;
   /// An expression to match nested function call errors with their
   /// assignee (if any exists).
   clang::Expr* m_NestedFuncError = nullptr;
@@ -97,10 +99,11 @@ public:
   /// \param[in] CallArgs The orignal call arguments of the function call.
   /// \param[in] ArgResultDecls The differentiated call arguments.
   /// \param[in] numArgs The number of call args.
-  void EmitNestedFunctionParamError(
-      clang::FunctionDecl* fnDecl,
-      llvm::SmallVectorImpl<clang::Expr*>& CallArgs,
-      llvm::SmallVectorImpl<clang::VarDecl*>& ArgResultDecls, size_t numArgs);
+  void
+  EmitNestedFunctionParamError(clang::FunctionDecl* fnDecl,
+                               llvm::SmallVectorImpl<clang::Expr*>& CallArgs,
+                               llvm::SmallVectorImpl<clang::Expr*>& ArgResult,
+                               size_t numArgs);
 
   /// Checks if a variable should be considered in error estimation.
   ///
@@ -158,7 +161,12 @@ public:
   /// \param[in] VDDiff The variable declaration to calculate the error in.
   /// \param[in] isInsideLoop A flag to keep track of if we are inside a
   /// loop.
-  void EmitDeclErrorStmts(VarDeclDiff VDDiff, bool isInsideLoop);
+  void EmitDeclErrorStmts(DeclDiff<clang::VarDecl> VDDiff, bool isInsideLoop);
+
+  /// This function returns the size expression for a given variable
+  /// (`var.size()` for clad::array/clad::array_ref
+  /// or `var_size` for array/pointer types)
+  clang::Expr* getSizeExpr(const clang::VarDecl* VD);
 
   void InitialiseRMV(ReverseModeVisitor& RMV) override;
   void ForgetRMV() override;
@@ -171,6 +179,8 @@ public:
   void ActOnEndOfDerivedFnBody() override;
   void ActBeforeDifferentiatingStmtInVisitCompoundStmt() override;
   void ActAfterProcessingStmtInVisitCompoundStmt() override;
+  void
+  ActAfterProcessingArraySubscriptExpr(const clang::Expr* revArrSub) override;
   void ActBeforeDifferentiatingSingleStmtBranchInVisitIfStmt() override;
   void ActBeforeFinalizingVisitBranchSingleStmtInIfVisitStmt() override;
   void ActBeforeDifferentiatingLoopInitStmt() override;
@@ -181,16 +191,14 @@ public:
   void ActBeforeFinalizingVisitCallExpr(
       const clang::CallExpr*& CE, clang::Expr*& fnDecl,
       llvm::SmallVectorImpl<clang::Expr*>& derivedCallArgs,
-      llvm::SmallVectorImpl<clang::VarDecl*>& ArgResultDecls,
-      bool asGrad) override;
+      llvm::SmallVectorImpl<clang::Expr*>& ArgResult, bool asGrad) override;
   void ActBeforeFinalizingAssignOp(clang::Expr*&, clang::Expr*&, clang::Expr*&,
                                    clang::BinaryOperator::Opcode&) override;
   void ActBeforeFinalizingDifferentiateSingleStmt(const direction& d) override;
   void ActBeforeFinalizingDifferentiateSingleExpr(const direction& d) override;
   void ActBeforeDifferentiatingCallExpr(
       llvm::SmallVectorImpl<clang::Expr*>& pullbackArgs,
-      llvm::SmallVectorImpl<clang::DeclStmt*>& ArgDecls,
-      bool hasAssignee) override;
+      llvm::SmallVectorImpl<clang::Stmt*>& ArgDecls, bool hasAssignee) override;
   void ActBeforeFinalizingVisitDeclStmt(
       llvm::SmallVectorImpl<clang::Decl*>& decls,
       llvm::SmallVectorImpl<clang::Decl*>& declsDiff) override;

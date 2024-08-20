@@ -1,5 +1,5 @@
-// RUN: %cladclang %s -I%S/../../include -oArrayInputsForwardMode.out 2>&1 | FileCheck %s
-// RUN: ./ArrayInputsForwardMode.out | FileCheck -check-prefix=CHECK-EXEC %s
+// RUN: %cladclang %s -I%S/../../include -oArrayInputsForwardMode.out 2>&1 | %filecheck %s
+// RUN: ./ArrayInputsForwardMode.out | %filecheck_exec %s
 
 //CHECK-NOT: {{.*error|warning|note:.*}}
 
@@ -10,7 +10,7 @@ double multiply(const double *arr) {
 }
 
 //CHECK:   double multiply_darg0_1(const double *arr) {
-//CHECK-NEXT:       return 0. * arr[1] + arr[0] * 1.;
+//CHECK-NEXT:       return 0 * arr[1] + arr[0] * 1.;
 //CHECK-NEXT:   }
 
 double divide(const double *arr) {
@@ -18,7 +18,7 @@ double divide(const double *arr) {
 }
 
 //CHECK:   double divide_darg0_1(const double *arr) {
-//CHECK-NEXT:       return (0. * arr[1] - arr[0] * 1.) / (arr[1] * arr[1]);
+//CHECK-NEXT:       return (0 * arr[1] - arr[0] * 1.) / (arr[1] * arr[1]);
 //CHECK-NEXT:   }
 
 double addArr(const double *arr, int n) {

@@ -27,6 +27,8 @@ public:
   void ActOnEndOfDerive() override;
   void ActAfterParsingDiffArgs(const DiffRequest& request,
                                DiffParams& args) override;
+  void
+  ActAfterProcessingArraySubscriptExpr(const clang::Expr* revArrSub) override;
   void ActBeforeCreatingDerivedFnParamTypes(unsigned& numExtraParams) override;
   void ActAfterCreatingDerivedFnParamTypes(
       llvm::SmallVectorImpl<clang::QualType>& paramTypes) override;
@@ -48,8 +50,7 @@ public:
   void ActBeforeFinalizingVisitCallExpr(
       const clang::CallExpr*& CE, clang::Expr*& OverloadedDerivedFn,
       llvm::SmallVectorImpl<clang::Expr*>& derivedCallArgs,
-      llvm::SmallVectorImpl<clang::VarDecl*>& ArgResultDecls,
-      bool asGrad) override;
+      llvm::SmallVectorImpl<clang::Expr*>& ArgResult, bool asGrad) override;
   void ActBeforeFinalizingPostIncDecOp(StmtDiff& diff) override;
   void ActAfterCloningLHSOfAssignOp(clang::Expr*&, clang::Expr*&,
                                     clang::BinaryOperatorKind& opCode) override;
@@ -60,8 +61,7 @@ public:
   void ActBeforeFinalizingDifferentiateSingleExpr(const direction& d) override;
   void ActBeforeDifferentiatingCallExpr(
       llvm::SmallVectorImpl<clang::Expr*>& pullbackArgs,
-      llvm::SmallVectorImpl<clang::DeclStmt*>& ArgDecls,
-      bool hasAssignee) override;
+      llvm::SmallVectorImpl<clang::Stmt*>& ArgDecls, bool hasAssignee) override;
   void ActBeforeFinalizingVisitDeclStmt(
       llvm::SmallVectorImpl<clang::Decl*>& decls,
       llvm::SmallVectorImpl<clang::Decl*>& declsDiff) override;

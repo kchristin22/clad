@@ -16,7 +16,8 @@ namespace clad {
 
 struct DiffRequest;
 class StmtDiff;
-class VarDeclDiff;
+
+template <typename T> class DeclDiff;
 
 using direction = rmv::direction;
 
@@ -58,6 +59,10 @@ public:
   ///\param[in] args differentiation args
   virtual void ActAfterParsingDiffArgs(const DiffRequest& request,
                                        DiffParams& args) {}
+
+  /// This is called after processing array subscript expressions.
+  virtual void
+  ActAfterProcessingArraySubscriptExpr(const clang::Expr* revArrSub) {}
 
   /// This is called just before creating derived function parameter types.
   virtual void ActBeforeCreatingDerivedFnParamTypes(unsigned& numExtraParam) {}
@@ -127,7 +132,7 @@ public:
   virtual void ActBeforeFinalizingVisitCallExpr(
       const clang::CallExpr*& CE, clang::Expr*& OverloadedDerivedFn,
       llvm::SmallVectorImpl<clang::Expr*>& derivedCallArgs,
-      llvm::SmallVectorImpl<clang::VarDecl*>& ArgResultDecls, bool asGrad) {}
+      llvm::SmallVectorImpl<clang::Expr*>& ArgResult, bool asGrad) {}
 
   /// This is called just before finalising processing of post and pre
   /// increment and decrement operations.
@@ -157,7 +162,7 @@ public:
 
   virtual void ActBeforeDifferentiatingCallExpr(
       llvm::SmallVectorImpl<clang::Expr*>& pullbackArgs,
-      llvm::SmallVectorImpl<clang::DeclStmt*>& ArgDecls, bool hasAssignee) {}
+      llvm::SmallVectorImpl<clang::Stmt*>& ArgDecls, bool hasAssignee) {}
 
   virtual void ActBeforeFinalizingVisitDeclStmt(
       llvm::SmallVectorImpl<clang::Decl*>& decls,

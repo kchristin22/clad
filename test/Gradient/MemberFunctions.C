@@ -1,19 +1,17 @@
-// RUN: %cladclang %s -fno-exceptions -I%S/../../include -oMemberFunctions.out 2>&1 | FileCheck %s
-// RUN: ./MemberFunctions.out | FileCheck -check-prefix=CHECK-EXEC %s
+// RUN: %cladclang %s -fno-exceptions -I%S/../../include -oMemberFunctions.out 2>&1 | %filecheck %s
+// RUN: ./MemberFunctions.out | %filecheck_exec %s
 // RUN: %cladclang -Xclang -plugin-arg-clad -Xclang -enable-tbr %s -fno-exceptions -I%S/../../include -oMemberFunctions.out
-// RUN: ./MemberFunctions.out | FileCheck -check-prefix=CHECK-EXEC %s
+// RUN: ./MemberFunctions.out | %filecheck_exec %s
 
-// RUN: %cladclang -std=c++14 %s -fno-exceptions -I%S/../../include -oMemberFunctions-cpp14.out 2>&1 | FileCheck %s
-// RUN: ./MemberFunctions-cpp14.out | FileCheck -check-prefix=CHECK-EXEC %s
+// RUN: %cladclang -std=c++14 %s -fno-exceptions -I%S/../../include -oMemberFunctions-cpp14.out 2>&1 | %filecheck %s
+// RUN: ./MemberFunctions-cpp14.out | %filecheck_exec %s
 // RUN: %cladclang -Xclang -plugin-arg-clad -Xclang -enable-tbr -std=c++14 %s -fno-exceptions -I%S/../../include -oMemberFunctions-cpp14.out
-// RUN: ./MemberFunctions-cpp14.out | FileCheck -check-prefix=CHECK-EXEC %s
+// RUN: ./MemberFunctions-cpp14.out | %filecheck_exec %s
 
-// RUN: %cladclang -std=c++17 %s -fno-exceptions -I%S/../../include -oMemberFunctions-cpp17.out 2>&1 | FileCheck %s
-// RUN: ./MemberFunctions-cpp17.out | FileCheck -check-prefix=CHECK-EXEC %s
+// RUN: %cladclang -std=c++17 %s -fno-exceptions -I%S/../../include -oMemberFunctions-cpp17.out 2>&1 | %filecheck %s
+// RUN: ./MemberFunctions-cpp17.out | %filecheck_exec %s
 // RUN: %cladclang -Xclang -plugin-arg-clad -Xclang -enable-tbr -std=c++17 %s -fno-exceptions -I%S/../../include -oMemberFunctions-cpp17.out
-// RUN: ./MemberFunctions-cpp17.out | FileCheck -check-prefix=CHECK-EXEC %s
-
-// XFAIL: asserts
+// RUN: ./MemberFunctions-cpp17.out | %filecheck_exec %s
 
 //CHECK-NOT: {{.*error|warning|note:.*}}
 #include "clad/Differentiator/Differentiator.h"
@@ -24,29 +22,25 @@ public:
   double x, y;
   double mem_fn(double i, double j) { return (x + y) * i + i * j; }
 
-  // CHECK: void mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
   double const_mem_fn(double i, double j) const { return (x + y) * i + i * j; }
 
-  // CHECK: void const_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) const {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -54,17 +48,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void volatile_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) volatile {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void volatile_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) volatile {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -72,31 +63,26 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_volatile_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const volatile {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_volatile_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) const volatile {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
   double lval_ref_mem_fn(double i, double j) & { return (x + y) * i + i * j; }
 
-  // CHECK: void lval_ref_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) & {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void lval_ref_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) & {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -104,15 +90,13 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_lval_ref_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const & {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_lval_ref_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) const & {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -120,17 +104,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void volatile_lval_ref_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) volatile & {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void volatile_lval_ref_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) volatile & {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -138,31 +119,26 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_volatile_lval_ref_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const volatile & {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_volatile_lval_ref_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) const volatile & {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
   double rval_ref_mem_fn(double i, double j) && { return (x + y) * i + i * j; }
 
-  // CHECK: void rval_ref_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) && {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void rval_ref_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) && {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -170,15 +146,13 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_rval_ref_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const && {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_rval_ref_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) const && {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -186,17 +160,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void volatile_rval_ref_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) volatile && {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void volatile_rval_ref_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) volatile && {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -204,17 +175,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_volatile_rval_ref_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const volatile && {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_volatile_rval_ref_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) const volatile && {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -222,15 +190,13 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void noexcept_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) noexcept {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void noexcept_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) noexcept {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -238,15 +204,13 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_noexcept_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const noexcept {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_noexcept_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) const noexcept {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -254,17 +218,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void volatile_noexcept_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) volatile noexcept {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void volatile_noexcept_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) volatile noexcept {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -272,17 +233,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_volatile_noexcept_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const volatile noexcept {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_volatile_noexcept_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) const volatile noexcept {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -290,15 +248,13 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void lval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) & noexcept {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void lval_ref_noexcept_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) & noexcept {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -306,15 +262,13 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_lval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const & noexcept {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_lval_ref_noexcept_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) const & noexcept {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -322,17 +276,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void volatile_lval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) volatile & noexcept {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void volatile_lval_ref_noexcept_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) volatile & noexcept {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -340,17 +291,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_volatile_lval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const volatile & noexcept {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_volatile_lval_ref_noexcept_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) const volatile & noexcept {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -358,15 +306,13 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void rval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) && noexcept {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void rval_ref_noexcept_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) && noexcept {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -374,15 +320,13 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_rval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const && noexcept {
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_rval_ref_noexcept_mem_fn_grad(double i, double j, SimpleFunctions *_d_this, double *_d_i, double *_d_j) const && noexcept {
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -390,17 +334,14 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void volatile_rval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) volatile && noexcept {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void volatile_rval_ref_noexcept_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) volatile && noexcept {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
@@ -408,31 +349,26 @@ public:
     return (x+y)*i + i*j;
   }
 
-  // CHECK: void const_volatile_rval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) const volatile && noexcept {
-  // CHECK-NEXT:     double _t0;
-  // CHECK-NEXT:     _t0 = (this->x + this->y);
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
+  // CHECK: void const_volatile_rval_ref_noexcept_mem_fn_grad(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i, double *_d_j) const volatile && noexcept {
+  // CHECK-NEXT:     double _t0 = (this->x + this->y);
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += _t0 * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
-  // CHECK-NEXT:         * _d_j += i * 1;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += _t0 * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
+  // CHECK-NEXT:         *_d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
 
   double partial_mem_fn(double i, double j) { return (x + y) * i + i * j; }
 
-  // CHECK: void partial_mem_fn_grad_0(double i, double j, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i) {
+  // CHECK: void partial_mem_fn_grad_0(double i, double j, SimpleFunctions *_d_this, double *_d_i) {
   // CHECK-NEXT:     double _d_j = 0;
-  // CHECK-NEXT:     goto _label0;
-  // CHECK-NEXT:   _label0:
   // CHECK-NEXT:     {
-  // CHECK-NEXT:         (* _d_this).x += 1 * i;
-  // CHECK-NEXT:         (* _d_this).y += 1 * i;
-  // CHECK-NEXT:         * _d_i += (this->x + this->y) * 1;
-  // CHECK-NEXT:         * _d_i += 1 * j;
+  // CHECK-NEXT:         (*_d_this).x += 1 * i;
+  // CHECK-NEXT:         (*_d_this).y += 1 * i;
+  // CHECK-NEXT:         *_d_i += (this->x + this->y) * 1;
+  // CHECK-NEXT:         *_d_i += 1 * j;
   // CHECK-NEXT:         _d_j += i * 1;
   // CHECK-NEXT:     }
   // CHECK-NEXT: }
@@ -451,44 +387,42 @@ public:
     return *this;
   }
 
-  void mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void volatile_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_volatile_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void lval_ref_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_lval_ref_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void volatile_lval_ref_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_volatile_lval_ref_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void rval_ref_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_rval_ref_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void volatile_rval_ref_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_volatile_rval_ref_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void volatile_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_volatile_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void lval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_lval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void volatile_lval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_volatile_lval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void rval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_rval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void volatile_rval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void const_volatile_rval_ref_noexcept_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j);
-  void partial_mem_fn_grad(double i, double j, clad::array_ref<double> _d_i);
+  void mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void volatile_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_volatile_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void lval_ref_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_lval_ref_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void volatile_lval_ref_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_volatile_lval_ref_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void rval_ref_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_rval_ref_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void volatile_rval_ref_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_volatile_rval_ref_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void volatile_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_volatile_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void lval_ref_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_lval_ref_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void volatile_lval_ref_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_volatile_lval_ref_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void rval_ref_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_rval_ref_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void volatile_rval_ref_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void const_volatile_rval_ref_noexcept_mem_fn_grad(double i, double j, double *_d_i, double *_d_j);
+  void partial_mem_fn_grad(double i, double j, double *_d_i);
 };
 
 double fn(double i,double j) {
   return i*i*j;
 }
 
-// CHECK: void fn_grad(double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) {
-// CHECK-NEXT:     goto _label0;
-// CHECK-NEXT:   _label0:
+// CHECK: void fn_grad(double i, double j, double *_d_i, double *_d_j) {
 // CHECK-NEXT:     {
-// CHECK-NEXT:         * _d_i += 1 * j * i;
-// CHECK-NEXT:         * _d_i += i * 1 * j;
-// CHECK-NEXT:         * _d_j += i * i * 1;
+// CHECK-NEXT:         *_d_i += 1 * j * i;
+// CHECK-NEXT:         *_d_i += i * 1 * j;
+// CHECK-NEXT:         *_d_j += i * i * 1;
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
@@ -496,51 +430,17 @@ double fn2(SimpleFunctions& sf, double i) {
   return sf.ref_mem_fn(i);
 }
 
-// CHECK: void ref_mem_fn_pullback(double i, double _d_y, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i) {
-// CHECK-NEXT:     double _t0;
-// CHECK-NEXT:     double _t1;
-// CHECK-NEXT:     _t0 = this->x;
-// CHECK-NEXT:     this->x = +i;
-// CHECK-NEXT:     _t1 = this->x;
-// CHECK-NEXT:     this->x = -i;
-// CHECK-NEXT:     goto _label0;
-// CHECK-NEXT:   _label0:
-// CHECK-NEXT:     (* _d_this).x += _d_y;
-// CHECK-NEXT:     {
-// CHECK-NEXT:         this->x = _t1;
-// CHECK-NEXT:         double _r_d1 = (* _d_this).x;
-// CHECK-NEXT:         (* _d_this).x -= _r_d1;
-// CHECK-NEXT:         * _d_i += -_r_d1;
-// CHECK-NEXT:     }
-// CHECK-NEXT:     {
-// CHECK-NEXT:         this->x = _t0;
-// CHECK-NEXT:         double _r_d0 = (* _d_this).x;
-// CHECK-NEXT:         (* _d_this).x -= _r_d0;
-// CHECK-NEXT:         * _d_i += _r_d0;
-// CHECK-NEXT:     }
-// CHECK-NEXT: }
+// CHECK: void ref_mem_fn_pullback(double i, double _d_y, SimpleFunctions *_d_this, double *_d_i);
 
-// CHECK: clad::ValueAndAdjoint<double &, double &> ref_mem_fn_forw(double i, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_i) {
-// CHECK-NEXT:     double _t0;
-// CHECK-NEXT:     double _t1;
-// CHECK-NEXT:     _t0 = this->x;
-// CHECK-NEXT:     this->x = +i;
-// CHECK-NEXT:     _t1 = this->x;
-// CHECK-NEXT:     this->x = -i;
-// CHECK-NEXT:     return {this->x, (* _d_this).x};
-// CHECK-NEXT: }
+// CHECK: clad::ValueAndAdjoint<double &, double &> ref_mem_fn_forw(double i, SimpleFunctions *_d_this, double *_d_i);
 
-// CHECK: void fn2_grad(SimpleFunctions &sf, double i, clad::array_ref<SimpleFunctions> _d_sf, clad::array_ref<double> _d_i) {
-// CHECK-NEXT:     SimpleFunctions _t0;
-// CHECK-NEXT:     _t0 = sf;
-// CHECK-NEXT:     clad::ValueAndAdjoint<double &, double &> _t1 = _t0.ref_mem_fn_forw(i, &(* _d_sf), nullptr);
-// CHECK-NEXT:     goto _label0;
-// CHECK-NEXT:   _label0:
+// CHECK: void fn2_grad(SimpleFunctions &sf, double i, SimpleFunctions *_d_sf, double *_d_i) {
+// CHECK-NEXT:     SimpleFunctions _t0 = sf;
+// CHECK-NEXT:     clad::ValueAndAdjoint<double &, double &> _t1 = _t0.ref_mem_fn_forw(i, &(*_d_sf), nullptr);
 // CHECK-NEXT:     {
-// CHECK-NEXT:         double _grad0 = 0.;
-// CHECK-NEXT:         _t0.ref_mem_fn_pullback(i, 1, &(* _d_sf), &_grad0);
-// CHECK-NEXT:         double _r0 = _grad0;
-// CHECK-NEXT:         * _d_i += _r0;
+// CHECK-NEXT:         double _r0 = 0;
+// CHECK-NEXT:         _t0.ref_mem_fn_pullback(i, 1, &(*_d_sf), &_r0);
+// CHECK-NEXT:         *_d_i += _r0;
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
@@ -554,39 +454,18 @@ double fn5(SimpleFunctions& v, double value) {
   return v.x;
 }
 
-// CHECK: void operator_plus_equal_pullback(double value, SimpleFunctions _d_y, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<double> _d_value) {
-// CHECK-NEXT:     double _t0;
-// CHECK-NEXT:     _t0 = this->x;
-// CHECK-NEXT:     this->x += value;
-// CHECK-NEXT:     goto _label0;
-// CHECK-NEXT:   _label0:
-// CHECK-NEXT:     ;
-// CHECK-NEXT:     {
-// CHECK-NEXT:         this->x = _t0;
-// CHECK-NEXT:         double _r_d0 = (* _d_this).x;
-// CHECK-NEXT:         * _d_value += _r_d0;
-// CHECK-NEXT:     }
-// CHECK-NEXT: }
+// CHECK: void operator_plus_equal_pullback(double value, SimpleFunctions _d_y, SimpleFunctions *_d_this, double *_d_value);
 
-// CHECK: clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> operator_plus_equal_forw(double value, clad::array_ref<SimpleFunctions> _d_this, clad::array_ref<SimpleFunctions> _d_value) {
-// CHECK-NEXT:     double _t0;
-// CHECK-NEXT:     _t0 = this->x;
-// CHECK-NEXT:     this->x += value;
-// CHECK-NEXT:     return {*this, (* _d_this)};
-// CHECK-NEXT: }
+// CHECK: clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> operator_plus_equal_forw(double value, SimpleFunctions *_d_this, SimpleFunctions *_d_value);
 
-// CHECK: void fn5_grad(SimpleFunctions &v, double value, clad::array_ref<SimpleFunctions> _d_v, clad::array_ref<double> _d_value) {
-// CHECK-NEXT:     SimpleFunctions _t0;
-// CHECK-NEXT:     _t0 = v;
-// CHECK-NEXT:     clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> _t1 = _t0.operator_plus_equal_forw(value, &(* _d_v), nullptr);
-// CHECK-NEXT:     goto _label0;
-// CHECK-NEXT:   _label0:
-// CHECK-NEXT:     (* _d_v).x += 1;
+// CHECK: void fn5_grad(SimpleFunctions &v, double value, SimpleFunctions *_d_v, double *_d_value) {
+// CHECK-NEXT:     SimpleFunctions _t0 = v;
+// CHECK-NEXT:     clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> _t1 = _t0.operator_plus_equal_forw(value, &(*_d_v), nullptr);
+// CHECK-NEXT:     (*_d_v).x += 1;
 // CHECK-NEXT:     {
-// CHECK-NEXT:         double _grad0 = 0.;
-// CHECK-NEXT:         _t0.operator_plus_equal_pullback(value, {}, &(* _d_v), &_grad0);
-// CHECK-NEXT:         double _r0 = _grad0;
-// CHECK-NEXT:         * _d_value += _r0;
+// CHECK-NEXT:         double _r0 = 0;
+// CHECK-NEXT:         _t0.operator_plus_equal_pullback(value, {}, &(*_d_v), &_r0);
+// CHECK-NEXT:         *_d_value += _r0;
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
@@ -595,34 +474,15 @@ double fn4(SimpleFunctions& v) {
   return v.x;
 }
 
-// CHECK: void operator_plus_plus_pullback(SimpleFunctions _d_y, clad::array_ref<SimpleFunctions> _d_this) {
-// CHECK-NEXT:     double _t0;
-// CHECK-NEXT:     _t0 = this->x;
-// CHECK-NEXT:     this->x += 1.;
-// CHECK-NEXT:     goto _label0;
-// CHECK-NEXT:   _label0:
-// CHECK-NEXT:     ;
-// CHECK-NEXT:     {
-// CHECK-NEXT:         this->x = _t0;
-// CHECK-NEXT:         double _r_d0 = (* _d_this).x;
-// CHECK-NEXT:     }
-// CHECK-NEXT: }
+// CHECK: void operator_plus_plus_pullback(SimpleFunctions _d_y, SimpleFunctions *_d_this);
 
-// CHECK: clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> operator_plus_plus_forw(clad::array_ref<SimpleFunctions> _d_this) {
-// CHECK-NEXT:     double _t0;
-// CHECK-NEXT:     _t0 = this->x;
-// CHECK-NEXT:     this->x += 1.;
-// CHECK-NEXT:     return {*this, (* _d_this)};
-// CHECK-NEXT: }
+// CHECK: clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> operator_plus_plus_forw(SimpleFunctions *_d_this);
 
-// CHECK: void fn4_grad(SimpleFunctions &v, clad::array_ref<SimpleFunctions> _d_v) {
-// CHECK-NEXT:     SimpleFunctions _t0;
-// CHECK-NEXT:     _t0 = v;
-// CHECK-NEXT:     clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> _t1 = _t0.operator_plus_plus_forw(&(* _d_v));
-// CHECK-NEXT:     goto _label0;
-// CHECK-NEXT:   _label0:
-// CHECK-NEXT:     (* _d_v).x += 1;
-// CHECK-NEXT:     _t0.operator_plus_plus_pullback({}, &(* _d_v));
+// CHECK: void fn4_grad(SimpleFunctions &v, SimpleFunctions *_d_v) {
+// CHECK-NEXT:     SimpleFunctions _t0 = v;
+// CHECK-NEXT:     clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> _t1 = _t0.operator_plus_plus_forw(&(*_d_v));
+// CHECK-NEXT:     (*_d_v).x += 1;
+// CHECK-NEXT:     _t0.operator_plus_plus_pullback({}, &(*_d_v));
 // CHECK-NEXT: }
 
 int main() {
@@ -676,35 +536,29 @@ int main() {
 
   auto d_const_volatile_lval_ref_mem_fn_i = clad::gradient(&SimpleFunctions::const_volatile_lval_ref_mem_fn, "i");
 
-  // CHECK:   void const_volatile_lval_ref_mem_fn_grad_0(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_i) const volatile & {
+  // CHECK:   void const_volatile_lval_ref_mem_fn_grad_0(double i, double j, volatile SimpleFunctions *_d_this, double *_d_i) const volatile & {
   // CHECK-NEXT:       double _d_j = 0;
-  // CHECK-NEXT:       double _t0;
-  // CHECK-NEXT:       _t0 = (this->x + this->y);
-  // CHECK-NEXT:       goto _label0;
-  // CHECK-NEXT:       _label0:
+  // CHECK-NEXT:       double _t0 = (this->x + this->y);
   // CHECK-NEXT:       {
-  // CHECK-NEXT:           (* _d_this).x += 1 * i;
-  // CHECK-NEXT:           (* _d_this).y += 1 * i;
-  // CHECK-NEXT:           * _d_i += _t0 * 1;
-  // CHECK-NEXT:           * _d_i += 1 * j;
+  // CHECK-NEXT:           (*_d_this).x += 1 * i;
+  // CHECK-NEXT:           (*_d_this).y += 1 * i;
+  // CHECK-NEXT:           *_d_i += _t0 * 1;
+  // CHECK-NEXT:           *_d_i += 1 * j;
   // CHECK-NEXT:           _d_j += i * 1;
   // CHECK-NEXT:       }
   // CHECK-NEXT:   }
 
   auto d_const_volatile_rval_ref_mem_fn_j = clad::gradient(&SimpleFunctions::const_volatile_rval_ref_mem_fn, "j");
 
-  // CHECK:   void const_volatile_rval_ref_mem_fn_grad_1(double i, double j, clad::array_ref<volatile SimpleFunctions> _d_this, clad::array_ref<double> _d_j) const volatile && {
+  // CHECK:   void const_volatile_rval_ref_mem_fn_grad_1(double i, double j, volatile SimpleFunctions *_d_this, double *_d_j) const volatile && {
   // CHECK-NEXT:       double _d_i = 0;
-  // CHECK-NEXT:       double _t0;
-  // CHECK-NEXT:       _t0 = (this->x + this->y);
-  // CHECK-NEXT:       goto _label0;
-  // CHECK-NEXT:       _label0:
+  // CHECK-NEXT:       double _t0 = (this->x + this->y);
   // CHECK-NEXT:       {
-  // CHECK-NEXT:           (* _d_this).x += 1 * i;
-  // CHECK-NEXT:           (* _d_this).y += 1 * i;
+  // CHECK-NEXT:           (*_d_this).x += 1 * i;
+  // CHECK-NEXT:           (*_d_this).y += 1 * i;
   // CHECK-NEXT:           _d_i += _t0 * 1;
   // CHECK-NEXT:           _d_i += 1 * j;
-  // CHECK-NEXT:           * _d_j += i * 1;
+  // CHECK-NEXT:           *_d_j += i * 1;
   // CHECK-NEXT:       }
   // CHECK-NEXT:   }
 
@@ -713,23 +567,77 @@ int main() {
   d_fn3.execute(2, 3, 4, 5, &result[0], &result[1]);
   printf("%.2f %.2f", result[0], result[1]); // CHECK-EXEC: 10.00 4.00
 
-  // CHECK: void fn3_grad_2_3(double x, double y, double i, double j, clad::array_ref<double> _d_i, clad::array_ref<double> _d_j) {
+// CHECK: void fn3_grad_2_3(double x, double y, double i, double j, double *_d_i, double *_d_j) {
 // CHECK-NEXT:     double _d_x = 0;
 // CHECK-NEXT:     double _d_y = 0;
 // CHECK-NEXT:     SimpleFunctions _d_sf({});
-// CHECK-NEXT:     SimpleFunctions _t0;
 // CHECK-NEXT:     SimpleFunctions sf(x, y);
-// CHECK-NEXT:     _t0 = sf;
-// CHECK-NEXT:     goto _label0;
-// CHECK-NEXT:   _label0:
+// CHECK-NEXT:     SimpleFunctions _t0 = sf;
 // CHECK-NEXT:     {
-// CHECK-NEXT:         double _grad0 = 0.;
-// CHECK-NEXT:         double _grad1 = 0.;
-// CHECK-NEXT:         _t0.mem_fn_pullback(i, j, 1, &_d_sf, &_grad0, &_grad1);
-// CHECK-NEXT:         double _r0 = _grad0;
-// CHECK-NEXT:         * _d_i += _r0;
-// CHECK-NEXT:         double _r1 = _grad1;
-// CHECK-NEXT:         * _d_j += _r1;
+// CHECK-NEXT:         double _r0 = 0;
+// CHECK-NEXT:         double _r1 = 0;
+// CHECK-NEXT:         _t0.mem_fn_pullback(i, j, 1, &_d_sf, &_r0, &_r1);
+// CHECK-NEXT:         *_d_i += _r0;
+// CHECK-NEXT:         *_d_j += _r1;
 // CHECK-NEXT:     }
+// CHECK-NEXT: }
+
+// CHECK: void ref_mem_fn_pullback(double i, double _d_y, SimpleFunctions *_d_this, double *_d_i) {
+// CHECK-NEXT:     double _t0 = this->x;
+// CHECK-NEXT:     this->x = +i;
+// CHECK-NEXT:     double _t1 = this->x;
+// CHECK-NEXT:     this->x = -i;
+// CHECK-NEXT:     (*_d_this).x += _d_y;
+// CHECK-NEXT:     {
+// CHECK-NEXT:         this->x = _t1;
+// CHECK-NEXT:         double _r_d1 = (*_d_this).x;
+// CHECK-NEXT:         (*_d_this).x = 0;
+// CHECK-NEXT:         *_d_i += -_r_d1;
+// CHECK-NEXT:     }
+// CHECK-NEXT:     {
+// CHECK-NEXT:         this->x = _t0;
+// CHECK-NEXT:         double _r_d0 = (*_d_this).x;
+// CHECK-NEXT:         (*_d_this).x = 0;
+// CHECK-NEXT:         *_d_i += _r_d0;
+// CHECK-NEXT:     }
+// CHECK-NEXT: }
+
+// CHECK: clad::ValueAndAdjoint<double &, double &> ref_mem_fn_forw(double i, SimpleFunctions *_d_this, double *_d_i) {
+// CHECK-NEXT:     double _t0 = this->x;
+// CHECK-NEXT:     this->x = +i;
+// CHECK-NEXT:     double _t1 = this->x;
+// CHECK-NEXT:     this->x = -i;
+// CHECK-NEXT:     return {this->x, (*_d_this).x};
+// CHECK-NEXT: }
+
+// CHECK: void operator_plus_equal_pullback(double value, SimpleFunctions _d_y, SimpleFunctions *_d_this, double *_d_value) {
+// CHECK-NEXT:     double _t0 = this->x;
+// CHECK-NEXT:     this->x += value;
+// CHECK-NEXT:     {
+// CHECK-NEXT:         this->x = _t0;
+// CHECK-NEXT:         double _r_d0 = (*_d_this).x;
+// CHECK-NEXT:         *_d_value += _r_d0;
+// CHECK-NEXT:     }
+// CHECK-NEXT: }
+
+// CHECK: clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> operator_plus_equal_forw(double value, SimpleFunctions *_d_this, SimpleFunctions *_d_value) {
+// CHECK-NEXT:     double _t0 = this->x;
+// CHECK-NEXT:     this->x += value;
+// CHECK-NEXT:     return {*this, (*_d_this)};
+// CHECK-NEXT: }
+
+// CHECK: void operator_plus_plus_pullback(SimpleFunctions _d_y, SimpleFunctions *_d_this) {
+// CHECK-NEXT:     double _t0 = this->x;
+// CHECK-NEXT:     this->x += 1.;
+// CHECK-NEXT:     {
+// CHECK-NEXT:         this->x = _t0;
+// CHECK-NEXT:         double _r_d0 = (*_d_this).x;
+// CHECK-NEXT:     }
+// CHECK-NEXT: }
+
+// CHECK: clad::ValueAndAdjoint<SimpleFunctions &, SimpleFunctions &> operator_plus_plus_forw(SimpleFunctions *_d_this) {
+// CHECK-NEXT:     double _t0 = this->x;
+// CHECK-NEXT:     this->x += 1.;
+// CHECK-NEXT:     return {*this, (*_d_this)};
 // CHECK-NEXT: }
 }

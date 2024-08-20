@@ -42,6 +42,12 @@ void MultiplexExternalRMVSource::ActAfterParsingDiffArgs(
   }
 }
 
+void MultiplexExternalRMVSource::ActAfterProcessingArraySubscriptExpr(
+    const clang::Expr* revArrSub) {
+  for (auto source : m_Sources)
+    source->ActAfterProcessingArraySubscriptExpr(revArrSub);
+}
+
 void MultiplexExternalRMVSource::ActBeforeCreatingDerivedFnParamTypes(
     unsigned& numExtraParams) {
   for (auto source : m_Sources) {
@@ -149,10 +155,10 @@ void MultiplexExternalRMVSource::ActBeforeFinalizingVisitReturnStmt(
 void MultiplexExternalRMVSource::ActBeforeFinalizingVisitCallExpr(
     const clang::CallExpr*& CE, clang::Expr*& OverloadedDerivedFn,
     llvm::SmallVectorImpl<clang::Expr*>& derivedCallArgs,
-    llvm::SmallVectorImpl<clang::VarDecl*>& ArgResultDecls, bool asGrad) {
+    llvm::SmallVectorImpl<clang::Expr*>& ArgResult, bool asGrad) {
   for (auto source : m_Sources) {
-    source->ActBeforeFinalizingVisitCallExpr(CE, OverloadedDerivedFn, derivedCallArgs,
-                                             ArgResultDecls, asGrad);
+    source->ActBeforeFinalizingVisitCallExpr(
+        CE, OverloadedDerivedFn, derivedCallArgs, ArgResult, asGrad);
   }
 }
 
@@ -199,7 +205,7 @@ void MultiplexExternalRMVSource::ActBeforeFinalizingDifferentiateSingleExpr(
 
 void MultiplexExternalRMVSource::ActBeforeDifferentiatingCallExpr(
     llvm::SmallVectorImpl<clang::Expr*>& pullbackArgs,
-    llvm::SmallVectorImpl<clang::DeclStmt*>& ArgDecls, bool hasAssignee) {
+    llvm::SmallVectorImpl<clang::Stmt*>& ArgDecls, bool hasAssignee) {
   for (auto source : m_Sources)
     source->ActBeforeDifferentiatingCallExpr(pullbackArgs, ArgDecls,
                                              hasAssignee);

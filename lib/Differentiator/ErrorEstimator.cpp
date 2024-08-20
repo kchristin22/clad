@@ -98,7 +98,7 @@ void ErrorEstimationHandler::SaveReturnExpr(Expr* retExpr) {
 
 void ErrorEstimationHandler::EmitNestedFunctionParamError(
     FunctionDecl* fnDecl, llvm::SmallVectorImpl<Expr*>& derivedCallArgs,
-    llvm::SmallVectorImpl<VarDecl*>& ArgResultDecls, size_t numArgs) {
+    llvm::SmallVectorImpl<Expr*>& ArgResult, size_t numArgs) {
   assert(fnDecl && "Must have a value");
   for (size_t i = 0; i < numArgs; i++) {
     if (!fnDecl->getParamDecl(0)->getType()->isLValueReferenceType())
@@ -109,7 +109,7 @@ void ErrorEstimationHandler::EmitNestedFunctionParamError(
     // if (utils::IsReferenceOrPointerType(fnDecl->getParamDecl(i)->getType()))
     //   continue;
     Expr* errorExpr = m_EstModel->AssignError(
-        {derivedCallArgs[i], m_RMV->BuildDeclRef(ArgResultDecls[i])},
+        {derivedCallArgs[i], m_RMV->Clone(ArgResult[i])},
         fnDecl->getNameInfo().getAsString() + "_param_" + std::to_string(i));
     Expr* errorStmt = m_RMV->BuildOp(BO_AddAssign, m_FinalError, errorExpr);
     m_ReverseErrorStmts.push_back(errorStmt);
@@ -181,6 +181,7 @@ void ErrorEstimationHandler::EmitFinalErrorStmts(
             m_RMV->BuildOp(BO_AddAssign, m_FinalError, errorExpr));
       } else {
         auto LdiffExpr = m_RMV->m_Variables[decl];
+        Expr* size = getSizeExpr(decl);
         VarDecl* idxExprDecl = nullptr;
         // Save our index expression so it can be used later.
         if (!m_IdxExpr) {
@@ -197,8 +198,7 @@ void ErrorEstimationHandler::EmitFinalErrorStmts(
         Expr* errorExpr = GetError(LRepl, Ldiff, params[i]->getNameAsString());
         Expr* finalAssignExpr =
             m_RMV->BuildOp(BO_AddAssign, m_FinalError, errorExpr);
-        Expr* conditionExpr = m_RMV->BuildOp(
-            BO_LT, m_IdxExpr, m_RMV->BuildArrayRefSizeExpr(LdiffExpr));
+        Expr* conditionExpr = m_RMV->BuildOp(BO_LE, m_IdxExpr, size);
         Expr* incExpr = m_RMV->BuildOp(UO_PostInc, m_IdxExpr);
         Stmt* ArrayParamLoop = new (m_RMV->m_Context)
             ForStmt(m_RMV->m_Context, nullptr, conditionExpr, nullptr, incExpr,
@@ -248,7 +248,7 @@ void ErrorEstimationHandler::EmitBinaryOpErrorStmts(Expr* LExpr,
   EmitErrorEstimationStmts(direction::reverse);
 }
 
-void ErrorEstimationHandler::EmitDeclErrorStmts(VarDeclDiff VDDiff,
+void ErrorEstimationHandler::EmitDeclErrorStmts(DeclDiff<VarDecl> VDDiff,
                                                 bool isInsideLoop) {
   auto VD = VDDiff.getDecl();
   if (!ShouldEstimateErrorFor(VD))
@@ -313,7 +313,7 @@ void ErrorEstimationHandler::ActBeforeCreatingDerivedFnBodyScope() {
 void ErrorEstimationHandler::ActOnEndOfDerivedFnBody() {
   // Since 'return' is not an assignment, add its error to _final_error
   // given it is not a DeclRefExpr.
-  EmitFinalErrorStmts(*m_Params, m_RMV->m_Function->getNumParams());
+  EmitFinalErrorStmts(*m_Params, m_RMV->m_DiffReq->getNumParams());
 }
 
 void ErrorEstimationHandler::ActBeforeDifferentiatingStmtInVisitCompoundStmt() {
@@ -327,6 +327,57 @@ void ErrorEstimationHandler::ActAfterProcessingStmtInVisitCompoundStmt() {
   // statements generated.
   EmitErrorEstimationStmts(direction::forward);
   EmitErrorEstimationStmts(direction::reverse);
+}
+
+void ErrorEstimationHandler::ActAfterProcessingArraySubscriptExpr(
+    const Expr* revArrSub) {
+  if (const auto* ASE = dyn_cast<ArraySubscriptExpr>(revArrSub)) {
+    if (const auto* DRE =
+            dyn_cast<DeclRefExpr>(ASE->getBase()->IgnoreImplicit())) {
+      const auto* VD = cast<VarDecl>(DRE->getDecl());
+      Expr* VDdiff = m_RMV->m_Variables[VD];
+      // We only need to track sizes for arrays and pointers.
+      if (!utils::isArrayOrPointerType(VDdiff->getType()))
+        return;
+
+      // We only need to know the size of independent arrays.
+      auto& indVars = m_RMV->m_IndependentVars;
+      auto* it = std::find(indVars.begin(), indVars.end(), VD);
+      if (it == indVars.end())
+        return;
+
+      // Construct `var_size = max(var_size, idx);`
+      // to update `var_size` to the biggest index used if necessary.
+      Expr* size = getSizeExpr(VD);
+      Expr* idx = m_RMV->Clone(ASE->getIdx());
+      idx =
+          m_RMV->m_Sema.ImpCastExprToType(idx, size->getType(), CK_IntegralCast)
+              .get();
+      llvm::SmallVector<clang::Expr*, 2> params{size, idx};
+      Expr* extendedSize = m_EstModel->GetFunctionCall("max", "std", params);
+      size = m_RMV->Clone(size);
+      Stmt* updateSize = m_RMV->BuildOp(BO_Assign, size, extendedSize);
+      m_RMV->addToCurrentBlock(updateSize, direction::reverse);
+    }
+  }
+}
+
+Expr* ErrorEstimationHandler::getSizeExpr(const VarDecl* VD) {
+  // For every array/pointer variable `arr`
+  // we create `arr_size` to track the size.
+  auto foundSize = m_ArrSizes.find(VD);
+  // If the size variable is already generated, just clone the decl ref.
+  if (foundSize != m_ArrSizes.end())
+    return m_RMV->Clone(foundSize->second);
+  // If the size variable is not generated yet,
+  // generate it now.
+  QualType intTy = m_RMV->m_Context.getSizeType();
+  VarDecl* sizeVD = m_RMV->BuildGlobalVarDecl(
+      intTy, VD->getNameAsString() + "_size", m_RMV->getZeroInit(intTy));
+  m_RMV->AddToGlobalBlock(m_RMV->BuildDeclStmt(sizeVD));
+  Expr* size = m_RMV->BuildDeclRef(sizeVD);
+  m_ArrSizes[VD] = size;
+  return size;
 }
 
 void ErrorEstimationHandler::
@@ -372,7 +423,7 @@ void ErrorEstimationHandler::ActBeforeFinalizingPostIncDecOp(StmtDiff& diff) {
 void ErrorEstimationHandler::ActBeforeFinalizingVisitCallExpr(
     const clang::CallExpr*& CE, clang::Expr*& OverloadedDerivedFn,
     llvm::SmallVectorImpl<Expr*>& derivedCallArgs,
-    llvm::SmallVectorImpl<VarDecl*>& ArgResultDecls, bool asGrad) {
+    llvm::SmallVectorImpl<Expr*>& ArgResult, bool asGrad) {
   if (OverloadedDerivedFn && asGrad) {
     // Derivative was found.
     FunctionDecl* fnDecl =
@@ -382,7 +433,7 @@ void ErrorEstimationHandler::ActBeforeFinalizingVisitCallExpr(
     // in the input prameters (if of reference type) to call and save to
     // emit them later.
 
-    EmitNestedFunctionParamError(fnDecl, derivedCallArgs, ArgResultDecls,
+    EmitNestedFunctionParamError(fnDecl, derivedCallArgs, ArgResult,
                                  CE->getNumArgs());
   }
 }
@@ -416,7 +467,7 @@ void ErrorEstimationHandler::ActBeforeFinalizingDifferentiateSingleExpr(
 
 void ErrorEstimationHandler::ActBeforeDifferentiatingCallExpr(
     llvm::SmallVectorImpl<clang::Expr*>& pullbackArgs,
-    llvm::SmallVectorImpl<DeclStmt*>& ArgDecls, bool hasAssignee) {
+    llvm::SmallVectorImpl<Stmt*>& ArgDecls, bool hasAssignee) {
   auto errorRef =
       m_RMV->BuildVarDecl(m_RMV->m_Context.DoubleTy, "_t",
                           m_RMV->getZeroInit(m_RMV->m_Context.DoubleTy));
@@ -437,8 +488,8 @@ void ErrorEstimationHandler::ActBeforeFinalizingVisitDeclStmt(
   // For all dependent variables, we register them for estimation
   // here.
   for (size_t i = 0; i < decls.size(); i++) {
-    VarDeclDiff VDDiff(static_cast<VarDecl*>(decls[0]),
-                       static_cast<VarDecl*>(declsDiff[0]));
+    DeclDiff<VarDecl> VDDiff(cast<VarDecl>(decls[0]),
+                             cast<VarDecl>(declsDiff[0]));
     EmitDeclErrorStmts(VDDiff, m_RMV->isInsideLoop);
   }
 }

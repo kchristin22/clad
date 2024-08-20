@@ -1,4 +1,4 @@
-// RUN: %cladclang -mllvm -debug-only=clad-tbr %s -I%S/../../include -oReverseLoops.out 2>&1 | FileCheck %s
+// RUN: %cladclang -mllvm -debug-only=clad-tbr %s -I%S/../../include -oReverseLoops.out 2>&1 | %filecheck %s
 // REQUIRES: asserts
 //CHECK-NOT: {{.*error|warning|note:.*}}
 
@@ -20,7 +20,6 @@ double f1(double x) {
 
 int main() {
   double result[3] = {};
-  clad::array_ref<double> result_ref(result, 3);
   TEST(f1, 3); // CHECK-EXEC: {27.00}
 
 }

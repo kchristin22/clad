@@ -54,41 +54,44 @@ namespace clad {
     llvm::StringRef m_RetParamName;
     //// A reference to the output parameter of the gradient function.
     clang::Expr* m_Result;
-    /// Based on To-Be-Recorded analysis performed before differentiation,
-    /// tells UsefulToStoreGlobal whether a variable with a given
-    /// SourceLocation has to be stored before being changed or not.
-    std::set<clang::SourceLocation> m_ToBeRecorded;
     /// A flag indicating if the Stmt we are currently visiting is inside loop.
     bool isInsideLoop = false;
     /// Output variable of vector-valued function
     std::string outputArrayStr;
     std::vector<Stmts> m_LoopBlock;
+    /// This expression checks if the forward pass loop was terminted due to
+    /// break. It is used to determine whether to run the loop cond
+    /// differentiation. One additional time.
+    clang::Expr* m_CurrentBreakFlagExpr;
+
     unsigned outputArrayCursor = 0;
     unsigned numParams = 0;
-    bool isVectorValued = false;
-    bool use_enzyme = false;
-    bool enableTBR = false;
     // FIXME: Should we make this an object instead of a pointer?
     // Downside of making it an object: We will need to include
     // 'MultiplexExternalRMVSource.h' file
     MultiplexExternalRMVSource* m_ExternalSource = nullptr;
     clang::Expr* m_Pullback = nullptr;
     const char* funcPostfix() const {
-      if (isVectorValued)
+      if (m_DiffReq.Mode == DiffMode::jacobian)
         return "_jac";
-      else if (use_enzyme)
+      if (m_DiffReq.use_enzyme)
         return "_grad_enzyme";
-      else
-        return "_grad";
+      return "_grad";
     }
 
     /// Removes the local const qualifiers from a QualType and returns a new
     /// type.
     static clang::QualType
     getNonConstType(clang::QualType T, clang::ASTContext& C, clang::Sema& S) {
-        clang::Qualifiers quals(T.getQualifiers());
-        quals.removeConst();
-        return S.BuildQualifiedType(T.getUnqualifiedType(), noLoc, quals);
+      bool isLValueRefType = T->isLValueReferenceType();
+      T = T.getNonReferenceType();
+      clang::Qualifiers quals(T.getQualifiers());
+      quals.removeConst();
+      clang::QualType nonConstType =
+          S.BuildQualifiedType(T.getUnqualifiedType(), noLoc, quals);
+      if (isLValueRefType)
+        return C.getLValueReferenceType(nonConstType);
+      return nonConstType;
     }
     // Function to Differentiate with Clad as Backend
     void DifferentiateWithClad();
@@ -244,21 +247,18 @@ namespace clad {
     /// it into m_Globals block (to be inserted into the beginning of fn's
     /// body). Returns reference R to the created declaration. If E is not null,
     /// puts an additional assignment statement (R = E) in the forward block.
-    /// Alternatively, if isInsideLoop is true, stores E in a stack. Returns
-    /// StmtDiff, where .getExpr() is intended to be used in forward pass and
-    /// .getExpr_dx() in the reverse pass. Two expressions can be different in
-    /// some cases, e.g. clad::push/pop inside loops.
-    StmtDiff GlobalStoreAndRef(clang::Expr* E,
-                               clang::QualType Type,
-                               llvm::StringRef prefix = "_t",
-                               bool force = false);
-    StmtDiff GlobalStoreAndRef(clang::Expr* E,
-                               llvm::StringRef prefix = "_t",
-                               bool force = false);
-    StmtDiff BuildPushPop(clang::Expr* E, clang::QualType Type,
-                          llvm::StringRef prefix = "_t", bool force = false);
-    StmtDiff StoreAndRestore(clang::Expr* E, llvm::StringRef prefix = "_t",
-                             bool force = false);
+    /// Alternatively, if isInsideLoop is true, stores E in a stack S. Puts a
+    /// push statement (clad::push(S, E)) in the forward block and a pop
+    /// statement
+    /// ((clad::pop(S))) in the reverse block. Returns a reference to the top
+    /// of the stack (clad::back(S)).
+    clang::Expr* GlobalStoreAndRef(clang::Expr* E, clang::QualType Type,
+                                   llvm::StringRef prefix = "_t",
+                                   bool force = false);
+    clang::Expr* GlobalStoreAndRef(clang::Expr* E,
+                                   llvm::StringRef prefix = "_t",
+                                   bool force = false);
+    StmtDiff StoreAndRestore(clang::Expr* E, llvm::StringRef prefix = "_t");
 
     //// A type returned by DelayedGlobalStoreAndRef
     /// .Result is a reference to the created (yet uninitialized) global
@@ -270,14 +270,18 @@ namespace clad {
     struct DelayedStoreResult {
       ReverseModeVisitor& V;
       StmtDiff Result;
+      clang::VarDecl* Declaration;
       bool isConstant;
       bool isInsideLoop;
+      bool isFnScope;
       bool needsUpdate;
       DelayedStoreResult(ReverseModeVisitor& pV, StmtDiff pResult,
-                         bool pIsConstant, bool pIsInsideLoop,
+                         clang::VarDecl* pDeclaration, bool pIsConstant,
+                         bool pIsInsideLoop, bool pIsFnScope,
                          bool pNeedsUpdate = false)
-          : V(pV), Result(pResult), isConstant(pIsConstant),
-            isInsideLoop(pIsInsideLoop), needsUpdate(pNeedsUpdate) {}
+          : V(pV), Result(pResult), Declaration(pDeclaration),
+            isConstant(pIsConstant), isInsideLoop(pIsInsideLoop),
+            isFnScope(pIsFnScope), needsUpdate(pNeedsUpdate) {}
       void Finalize(clang::Expr* New);
     };
 
@@ -317,8 +321,30 @@ namespace clad {
     CladTapeResult MakeCladTapeFor(clang::Expr* E,
                                    llvm::StringRef prefix = "_t");
 
+    /// A function to get the multi-argument "central_difference"
+    /// call expression for the given arguments.
+    ///
+    /// \param[in] targetFuncCall The function to get the derivative for.
+    /// \param[in] retType The return type of the target call expression.
+    /// \param[in] dfdx The dfdx corresponding to this call expression.
+    /// \param[in] numArgs The total number of 'args'.
+    /// \param[in] PreCallStmts The built statements to add to block
+    /// before the call to the derived function.
+    /// \param[in] PostCallStmts The built statements to add to block
+    /// after the call to the derived function.
+    /// \param[in] args All the arguments to the target function.
+    /// \param[in] outputArgs The output gradient arguments.
+    ///
+    /// \returns The derivative function call.
+    clang::Expr* GetMultiArgCentralDiffCall(
+        clang::Expr* targetFuncCall, clang::QualType retType, unsigned numArgs,
+        clang::Expr* dfdx, llvm::SmallVectorImpl<clang::Stmt*>& PreCallStmts,
+        llvm::SmallVectorImpl<clang::Stmt*>& PostCallStmts,
+        llvm::SmallVectorImpl<clang::Expr*>& args,
+        llvm::SmallVectorImpl<clang::Expr*>& outputArgs);
+
   public:
-    ReverseModeVisitor(DerivativeBuilder& builder);
+    ReverseModeVisitor(DerivativeBuilder& builder, const DiffRequest& request);
     virtual ~ReverseModeVisitor();
 
     ///\brief Produces the gradient of a given function.
@@ -357,6 +383,7 @@ namespace clad {
     virtual StmtDiff VisitDeclRefExpr(const clang::DeclRefExpr* DRE);
     StmtDiff VisitDeclStmt(const clang::DeclStmt* DS);
     StmtDiff VisitFloatingLiteral(const clang::FloatingLiteral* FL);
+    StmtDiff VisitCXXForRangeStmt(const clang::CXXForRangeStmt* FRS);
     StmtDiff VisitForStmt(const clang::ForStmt* FS);
     StmtDiff VisitIfStmt(const clang::IfStmt* If);
     StmtDiff VisitImplicitCastExpr(const clang::ImplicitCastExpr* ICE);
@@ -386,11 +413,17 @@ namespace clad {
     StmtDiff VisitSwitchStmt(const clang::SwitchStmt* SS);
     StmtDiff VisitCaseStmt(const clang::CaseStmt* CS);
     StmtDiff VisitDefaultStmt(const clang::DefaultStmt* DS);
-    VarDeclDiff DifferentiateVarDecl(const clang::VarDecl* VD);
+    DeclDiff<clang::VarDecl> DifferentiateVarDecl(const clang::VarDecl* VD,
+                                                  bool AddToBlock = true);
     StmtDiff VisitSubstNonTypeTemplateParmExpr(
         const clang::SubstNonTypeTemplateParmExpr* NTTP);
     StmtDiff
     VisitCXXNullPtrLiteralExpr(const clang::CXXNullPtrLiteralExpr* NPE);
+    StmtDiff VisitNullStmt(const clang::NullStmt* NS) {
+      return StmtDiff{Clone(NS), Clone(NS)};
+    };
+    static DeclDiff<clang::StaticAssertDecl>
+    DifferentiateStaticAssertDecl(const clang::StaticAssertDecl* SAD);
 
     /// A helper method to differentiate a single Stmt in the reverse mode.
     /// Internally, calls Visit(S, expr). Its result is wrapped into a
@@ -542,7 +575,6 @@ namespace clad {
 
       ReverseModeVisitor& m_RMV;
 
-      const bool m_IsInvokedBySwitchStmt = false;
       /// Builds and returns a literal expression of type `std::size_t` with
       /// `value` as value.
       clang::Expr* CreateSizeTLiteralExpr(std::size_t value);
@@ -557,6 +589,8 @@ namespace clad {
       clang::Expr* CreateCFTapePushExpr(std::size_t value);
 
     public:
+      bool m_IsInvokedBySwitchStmt = false;
+
       BreakContStmtHandler(ReverseModeVisitor& RMV, bool forSwitchStmt = false)
           : m_RMV(RMV), m_IsInvokedBySwitchStmt(forSwitchStmt) {}
 
@@ -578,6 +612,11 @@ namespace clad {
       /// expression, where `TapeRef` and `m_CurrentCounter` are replaced
       /// by their actual values respectively.
       clang::Stmt* CreateCFTapePushExprToCurrentCase();
+
+      /// Builds and return `clad::back(TapeRef) != m_CaseCounter`
+      /// expression, where `TapeRef` and `m_CaseCounter` are replaced
+      /// by their actual values respectively
+      clang::Expr* CreateCFTapeBackExprForCurrentCase();
 
       /// Does final modifications on forward and reverse blocks
       /// so that `break` and `continue` statements are handled
@@ -608,18 +647,14 @@ namespace clad {
     /// Computes and returns the sequence of derived function parameter types.
     ///
     /// Information about the original function and the differentiation mode
-    /// are taken from the data member variables. In particular, `m_Function`,
-    /// `m_Mode` data members should be correctly set before using this
-    /// function.
+    /// are taken from the data member variables.
     llvm::SmallVector<clang::QualType, 8> ComputeParamTypes(const DiffParams& diffParams);
 
     /// Builds and returns the sequence of derived function parameters.
     ///
     /// Information about the original function, derived function, derived
     /// function parameter types and the differentiation mode are implicitly
-    /// taken from the data member variables. In particular, `m_Function`,
-    /// `m_Mode` and `m_Derivative` should be correctly set before using this
-    /// function.
+    /// taken from the data member variables.
     llvm::SmallVector<clang::ParmVarDecl*, 8>
     BuildParams(DiffParams& diffParams);
 
