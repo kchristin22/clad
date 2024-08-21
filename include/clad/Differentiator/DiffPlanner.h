@@ -46,6 +46,9 @@ public:
   clang::CallExpr* CallContext = nullptr;
   /// Args provided to the call to clad::gradient/differentiate.
   const clang::Expr* Args = nullptr;
+  /// Return argument provided to the the call of clad::gradient/differentiate
+  /// when the arg function is of void return type.
+  const clang::Expr* ReturnArg = nullptr;
   /// Requested differentiation mode, forward or reverse.
   DiffMode Mode = DiffMode::unknown;
   /// If function appears in the call to clad::gradient/differentiate,

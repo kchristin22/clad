@@ -390,19 +390,20 @@ inline CUDA_HOST_DEVICE unsigned int GetLength(const char* code) {
   /// \returns `CladFunction` object to access the corresponding derived
   /// function.
   template <unsigned... BitMaskedOpts, typename ArgSpec = const char*,
-            typename F, typename DerivedFnType = GradientDerivedFnTraits_t<F>,
+            typename RetSpec = const char*, typename F,
+            typename DerivedFnType = GradientDerivedFnTraits_t<F>,
             typename = typename std::enable_if<
                 !std::is_class<remove_reference_and_pointer_t<F>>::value>::type>
   CladFunction<DerivedFnType, ExtractFunctorTraits_t<F>, true> __attribute__((
       annotate("G"))) CUDA_HOST_DEVICE
-  gradient(F f, ArgSpec args = "", ArgSpec retArg = "",
+  gradient(F f, ArgSpec args = "", RetSpec retArg = "",
            DerivedFnType derivedFn = static_cast<DerivedFnType>(nullptr),
            const char* code = "") {
-      assert(f && "Must pass in a non-0 argument");
-      if(!std::is_same<void, return_type_t<F>>::value && retArg != "")
-        assert(0 && "Ret arg is only supported for void functions");
-      return CladFunction<DerivedFnType, ExtractFunctorTraits_t<F>, true>(
-          derivedFn /* will be replaced by gradient*/, code);
+    assert(f && "Must pass in a non-0 argument");
+    if (!std::is_same<void, return_type_t<F>>::value && retArg != "")
+      assert(0 && "Ret arg is only supported for void functions");
+    return CladFunction<DerivedFnType, ExtractFunctorTraits_t<F>, true>(
+        derivedFn /* will be replaced by gradient*/, code);
   }
 
   /// Specialization for differentiating functors.

@@ -290,7 +290,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       // Store param name that represents the result of the void function call
       if (auto SL = dyn_cast<StringLiteral>(E)) {
         llvm::StringRef retParamName = SL->getString().trim();
-        auto fArgs = m_Function->parameters();
+        auto fArgs = FD->parameters();
         auto it = std::find_if(std::begin(fArgs), std::end(fArgs),
                               [&retParamName](const ParmVarDecl* PVD) {
                                 return PVD->getNameAsString() ==
@@ -624,24 +624,8 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     for (std::size_t i = 0; i < m_DiffReq->getNumParams(); ++i) {
       ParmVarDecl* param = paramsRef[i];
       // derived variables are already created for independent variables.
-      if (m_Variables.count(param)) {
-        // if all the parameters are to be derived and the function has no
-        // return statement, then we need to initialize the derived variables.
-        if (m_Variables.size() == m_Function->getNumParams() &&
-            m_Function->getReturnType()->isVoidType()) {
-          auto size_type = m_Context.getSizeType();
-          unsigned size_type_bits = m_Context.getIntWidth(size_type);
-          auto* one =
-              IntegerLiteral::Create(m_Context, llvm::APInt(size_type_bits, 1),
-                                     m_Context.IntTy, noLoc);
-          auto* left = param->getType()->isPointerType()
-                           ? BuildOp(UO_Deref, m_Variables[param])
-                           : m_Variables[param];
-          addToBlock(BuildOp(BinaryOperatorKind::BO_Assign, left, one),
-                     m_Globals);
-        }
+      if (m_Variables.count(param))
         continue;
-      }
       // in vector mode last non diff parameter is output parameter.
       if (m_DiffReq.Mode == DiffMode::jacobian &&
           i == m_DiffReq->getNumParams() - 1)
@@ -649,11 +633,29 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       auto VDDerivedType = param->getType();
       // We cannot initialize derived variable for pointer types because
       // we do not know the correct size.
-      if (utils::isArrayOrPointerType(VDDerivedType))
+      if (utils::isArrayOrPointerType(VDDerivedType) &&
+          m_RetParamName != param->getNameAsString())
         continue;
-      auto* VDDerived =
-          BuildGlobalVarDecl(VDDerivedType, "_d_" + param->getNameAsString(),
-                             getZeroInit(VDDerivedType));
+      VarDecl* VDDerived = nullptr;
+      if (m_DiffReq->getReturnType()->isVoidType() &&
+          m_RetParamName == param->getNameAsString()) {
+        // If the output parameter's derivative is not included in the
+        // independent variables, initialize it to 1.
+        if (VDDerivedType->isPointerType())
+          VDDerivedType = VDDerivedType->getPointeeType();
+        else if (VDDerivedType->isArrayType()) {
+          auto* VDDerivedTypePtr =
+              VDDerivedType->getArrayElementTypeNoTypeQual();
+          VDDerivedType = QualType(const_cast<Type*>(VDDerivedTypePtr), 0);
+        }
+        ExprResult One =
+            ConstantFolder::synthesizeLiteral(VDDerivedType, m_Context, 1);
+        VDDerived = BuildGlobalVarDecl(
+            VDDerivedType, "_d_" + param->getNameAsString(), One.get());
+      } else
+        VDDerived =
+            BuildGlobalVarDecl(VDDerivedType, "_d_" + param->getNameAsString(),
+                               getZeroInit(VDDerivedType));
       m_Variables[param] = BuildDeclRef(VDDerived);
       addToBlock(BuildDeclStmt(VDDerived), m_Globals);
     }

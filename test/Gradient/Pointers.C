@@ -470,17 +470,15 @@ void pointerArgOut(double* p) {
   *p *= *p;
 }
 
-// CHECK: void pointerArgOut_grad(double *p, clad::array_ref<double> _d_p) {
-// CHECK-NEXT:    * _d_p = 1;
-// CHECK-NEXT:    double _t0;
-// CHECK-NEXT:    _t0 = *p;
+// CHECK: void pointerArgOut_grad(double *p, double *_d_p) {
+// CHECK-NEXT:    double _t0 = *p;
 // CHECK-NEXT:    *p *= *p;
 // CHECK-NEXT:    {
 // CHECK-NEXT:        *p = _t0;
-// CHECK-NEXT:        double _r_d0 = * _d_p;
-// CHECK-NEXT:        * _d_p -= _r_d0;
-// CHECK-NEXT:        * _d_p += _r_d0 * *p;
-// CHECK-NEXT:        * _d_p += *p * _r_d0;
+// CHECK-NEXT:        double _r_d0 = *_d_p;
+// CHECK-NEXT:        *_d_p = 0;
+// CHECK-NEXT:        *_d_p += _r_d0 * *p;
+// CHECK-NEXT:        *_d_p += *p * _r_d0;
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 
@@ -594,7 +592,7 @@ int main() {
 
   auto d_pointerArgOut = clad::gradient(pointerArgOut);
   double *p = new double(5);
-  double d_p;
+  double d_p = 1;
   d_pointerArgOut.execute(p, &d_p);
   printf("%.2f\n", d_p); // CHECK-EXEC: 10.00
 }
