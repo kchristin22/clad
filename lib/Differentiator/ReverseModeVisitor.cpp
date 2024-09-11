@@ -240,13 +240,6 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
       addToCurrentBlock(BuildDeclStmt(gradientVD));
     }
 
-    // If the function is a global kernel, we need to transform it
-    // into a device function when calling it inside the overload function
-    // which is the final global kernel returned.
-    if (m_Derivative->hasAttr<clang::CUDAGlobalAttr>()) {
-      m_Derivative->dropAttr<clang::CUDAGlobalAttr>();
-      m_Derivative->addAttr(clang::CUDADeviceAttr::CreateImplicit(m_Context));
-    }
 
     Expr* callExpr = BuildCallExprToFunction(m_Derivative, callArgs,
                                              /*UseRefQualifiedThisObj=*/true);
@@ -346,7 +339,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     bool shouldCreateOverload = false;
     // FIXME: Gradient overload doesn't know how to handle additional parameters
     // added by the plugins yet.
-    if (request.Mode != DiffMode::jacobian && numExtraParam == 0)
+    if (request.Mode != DiffMode::jacobian && numExtraParam == 0 && !request.Function->hasAttr<clang::CUDAGlobalAttr>())
       shouldCreateOverload = true;
     if (!request.DeclarationOnly && !request.DerivedFDPrototypes.empty())
       // If the overload is already created, we don't need to create it again.

@@ -280,6 +280,107 @@ namespace clad {
         }
         bool lastDerivativeOrder = (request.CurrentDerivativeOrder ==
                                     request.RequestedDerivativeOrder);
+
+        FunctionDecl* gradientFD = request.CallContext->getDirectCallee();
+        const TemplateArgumentList* TAL =
+            gradientFD->getTemplateSpecializationArgs();
+        TemplateArgument derivedTypeTemplateArg = TAL->get(3);
+
+        derivedTypeTemplateArg.getAsType().print(llvm::outs(), Policy);
+        printf("\n");
+
+        QualType functionType = DerivativeDecl->getType();
+
+        // Construct the function pointer type
+        QualType functionPointerType = m_CI.getASTContext().getPointerType(functionType);
+
+        // Print the function pointer type
+        llvm::outs() << "Function pointer type: ";
+        functionPointerType.print(llvm::outs(),
+                                  Policy);
+        llvm::outs() << "\n";
+        
+
+        TemplateArgument newTemplateArg(functionPointerType);
+
+        SmallVector<TemplateArgument, 8> newArgs;
+        newArgs.reserve(TAL->size());
+
+        // Copy the old arguments, replacing the specified one
+        for (unsigned i = 0; i < TAL->size(); i++)
+          if (i == 3) // Replace the 4th argument (index 3)
+            newArgs.push_back(newTemplateArg);
+          else
+            newArgs.push_back(TAL->get(i));
+
+        // Create the new TemplateArgumentList
+        TemplateArgumentList* newTAL = TemplateArgumentList::CreateCopy(
+            m_CI.getASTContext(), newArgs);
+        if (!newTAL) {
+          llvm::errs()
+              << "Error: Failed to create new TemplateArgumentList.\n";
+          return nullptr;
+        }
+
+        FunctionTemplateDecl* FTD = gradientFD->getPrimaryTemplate();
+        if (!FTD) {
+          llvm::errs() << "Error: FunctionTemplateDecl is null.\n";
+          return nullptr;
+        }
+
+        gradientFD->setFunctionTemplateSpecialization(
+            FTD,                       // Function template declaration
+            newTAL,                    // New template arguments
+            nullptr,                   // Insert position (can be nullptr)
+            TSK_ImplicitInstantiation, // Template specialization kind
+            nullptr, // TemplateArgsAsWritten (can be nullptr)
+            gradientFD->getLocation() // Point of instantiation
+        );
+
+        ParmVarDecl* derivedFnArgType = gradientFD->getParamDecl(2);
+        derivedFnArgType->setType(functionPointerType);
+
+        // Step 1: Locate the ReturnStmt in the function body
+        Stmt* body = gradientFD->getBody();
+        if (!body) {
+          llvm::errs() << "Error: Function body is null.\n";
+          return nullptr;
+        }
+
+        // Traverse the function body to find the ReturnStmt
+        ReturnStmt* returnStmt = nullptr;
+        for (auto* stmt : body->children()) {
+          if (ReturnStmt* RS = dyn_cast<ReturnStmt>(stmt)) {
+            returnStmt = RS;
+            break;
+          }
+        }
+
+        if (!returnStmt) {
+          llvm::errs() << "Error: No return statement found.\n";
+          return nullptr;
+        }
+
+        // Step 2: Get the return value (expression)
+        Expr* returnExpr = returnStmt->getRetValue();
+        if (!returnExpr) {
+          llvm::errs() << "Error: No return expression found.\n";
+          return nullptr;
+        }
+
+        Decl* Claddecl =
+            dyn_cast<CXXConstructExpr>(returnExpr)->getConstructor();
+        if (!Claddecl) {
+          llvm::errs() << "Error: No decl found.\n";
+          return nullptr;
+        }
+
+        FunctionDecl* constructExpr = dyn_cast<FunctionDecl>(Claddecl);
+        if (!constructExpr) {
+          llvm::errs() << "Error: No decl found.\n";
+          return nullptr;
+        }
+        
         // If this is the last required derivative order, replace the function
         // inside a call to clad::differentiate/gradient with its derivative.
         if (request.CallUpdateRequired && lastDerivativeOrder)
