@@ -297,14 +297,13 @@ __global__ void compute(double *in, double *out, double val)
 double fn(double *in, double *out, double val) {
   compute<<<1, 10>>>(in, out, val);
   cudaDeviceSynchronize();
-  return 1;
-  // double out_host[10];
-  // cudaMemcpy(out_host, out, 10 * sizeof(double), cudaMemcpyDeviceToHost);
-  // double res = 0;
-  // for (int i=0; i < 10; ++i) {
-    // res += out_host[i];
-  // }
-  // return res;
+  double out_host[10];
+  cudaMemcpy(out_host, out, 10 * sizeof(double), cudaMemcpyDeviceToHost);
+  double res = 0;
+  for (int i=0; i < 10; ++i) {
+    res += out_host[i];
+  }
+  return res;
 }
 
 #define TEST(F, grid, block, shared_mem, use_stream, x, dx, N)              \

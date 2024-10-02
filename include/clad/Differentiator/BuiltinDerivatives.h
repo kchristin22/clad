@@ -82,6 +82,23 @@ ValueAndPushforward<int, int> cudaDeviceSynchronize_pushforward()
     __attribute__((host)) {
   return {cudaDeviceSynchronize(), 0};
 }
+
+template <typename T>
+void cudaMalloc_pullback(T** devPtr, size_t sz, T** d_devPtr, size_t d_sz)
+    __attribute__((host)) {
+  cudaMalloc(d_devPtr, sz);
+}
+
+void cudaMemcpy_pullback(void* destPtr, void* srcPtr, size_t count,
+                         cudaMemcpyKind kind, void* d_destPtr, void* d_srcPtr,
+                         size_t* d_count, cudaMemcpyKind* d_kind)
+    __attribute__((host)) {
+  cudaMemcpy(d_destPtr, d_srcPtr, count, kind);
+}
+
+void cudaDeviceSynchronize_pullback() __attribute__((host)) {
+  cudaDeviceSynchronize();
+}
 #endif
 
 CUDA_HOST_DEVICE inline ValueAndPushforward<float, float>
