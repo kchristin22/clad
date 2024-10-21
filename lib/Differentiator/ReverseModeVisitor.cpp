@@ -614,7 +614,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
     // If the function is a global kernel, all its parameters reside in the
     // global memory of the GPU
     else if (m_DiffReq->hasAttr<clang::CUDAGlobalAttr>())
-      for (auto param : params)
+      for (auto* param : params)
         m_CUDAGlobalArgs.emplace(param);
     m_Derivative->setBody(nullptr);
 
