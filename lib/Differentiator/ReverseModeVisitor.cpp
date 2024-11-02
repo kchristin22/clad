@@ -360,6 +360,7 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
 
   DerivativeAndOverload ReverseModeVisitor::DerivePullback() {
     const clang::FunctionDecl* FD = m_DiffReq.Function;
+    printf("Deriving pullback: %s\n", FD->getNameAsString().c_str());
     // FIXME: Duplication of external source here is a workaround
     // for the two 'Derive's being different functions.
     if (m_ExternalSource)
