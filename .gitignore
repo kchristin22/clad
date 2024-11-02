@@ -1,5 +1,3 @@
 /build
 /.vscode
 /inst
-/test/CUDA/LBM
-/test/CUDA/RSBench
