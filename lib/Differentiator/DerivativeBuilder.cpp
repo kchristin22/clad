@@ -154,7 +154,6 @@ static void registerDerivative(FunctionDecl* derivedFD, Sema& semaRef) {
           Scope* S = m_Sema.getScopeForContext(m_Sema.CurContext);
           auto* ULE = cast<UnresolvedLookupExpr>(ovl);
           // Populate CandidateSet.
-          printf("searching for %s\n", ULE->getName().getAsString().c_str());
           m_Sema.buildOverloadedCallSet(S, UnresolvedLookup, ULE, ARargs, Loc,
                                         &CandidateSet, &result);
           OverloadCandidateSet::iterator Best = nullptr;

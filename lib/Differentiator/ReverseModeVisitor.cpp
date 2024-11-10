@@ -362,7 +362,6 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
 
   DerivativeAndOverload ReverseModeVisitor::DerivePullback() {
     const clang::FunctionDecl* FD = m_DiffReq.Function;
-    printf("Deriving pullback: %s\n", FD->getNameAsString().c_str());
     // FIXME: Duplication of external source here is a workaround
     // for the two 'Derive's being different functions.
     if (m_ExternalSource)
@@ -4206,7 +4205,9 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
         adjointArg = BuildDeclRef(dArgDecl);
         argDiff = Visit(arg, BuildDeclRef(dArgDecl));
       }
-
+      primalArgs.push_back(argDiff.getExpr());
+      if (!adjointArg)
+        continue;
       if (utils::isArrayOrPointerType(ArgTy)) {
         reverseForwAdjointArgs.push_back(adjointArg);
         adjointArgs.push_back(adjointArg);
@@ -4218,7 +4219,6 @@ Expr* getArraySizeExpr(const ArrayType* AT, ASTContext& context,
         adjointArgs.push_back(BuildOp(UnaryOperatorKind::UO_AddrOf, adjointArg,
                                       m_DiffReq->getLocation()));
       }
-      primalArgs.push_back(argDiff.getExpr());
     }
 
     // Try to create a pullback constructor call
