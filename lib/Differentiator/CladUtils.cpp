@@ -364,6 +364,8 @@ namespace clad {
 
     MemberExpr* BuildMemberExpr(Sema& semaRef, Scope* S, Expr* base,
                                 llvm::StringRef memberName) {
+      if (!base)
+        return nullptr;
       UnqualifiedId id;
       id.setIdentifier(GetIdentifierInfo(semaRef, memberName), noLoc);
       CXXScopeSpec SS;
