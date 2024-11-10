@@ -236,14 +236,12 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 	// Loop over Poles within window, add contributions
 	for( int i = w.start; i < w.end; i++ )
 	{
-		RSComplex PSIIKI;
-		RSComplex CDUM;
 		Pole pole = poles[nuc * max_num_poles + i];
 		RSComplex t1 = {0, 1};
 		RSComplex t2 = {std::sqrt(E), 0 };
-		PSIIKI = c_div( t1 , c_sub(pole.MP_EA,t2) );
+		RSComplex PSIIKI = c_div( t1 , c_sub(pole.MP_EA,t2) );
 		RSComplex E_c = {E, 0};
-		CDUM = c_div(PSIIKI, E_c);
+		RSComplex CDUM = c_div(PSIIKI, E_c);
 		sigT += (c_mul(pole.MP_RT, c_mul(CDUM, sigTfactors[pole.l_value])) ).r;
 		sigA += (c_mul( pole.MP_RA, CDUM)).r;
 		sigF += (c_mul(pole.MP_RF, CDUM)).r;

@@ -4128,7 +4128,9 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
         adjointArg = BuildDeclRef(dArgDecl);
         argDiff = Visit(arg, BuildDeclRef(dArgDecl));
       }
-
+      primalArgs.push_back(argDiff.getExpr());
+      if (!adjointArg)
+        continue;
       if (utils::isArrayOrPointerType(ArgTy)) {
         reverseForwAdjointArgs.push_back(adjointArg);
         adjointArgs.push_back(adjointArg);
