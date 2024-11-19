@@ -13,16 +13,19 @@
 //          -L/path/to/cuda/lib64 -lcudart_static -ldl -lrt -pthread -lm -lstdc++
 // RUN: ./TensorContraction
 
+#define non_differentiable __attribute__((annotate("non_differentiable")))
+
+#include <chrono>
+
 #include "clad/Differentiator/Differentiator.h"
 
 typedef unsigned long long int size_type;
 
-__device__ void computeStartStep(size_type& A_start, size_type& A_step,
-                                 size_type& B_start, size_type& B_step,
-                                 const int idx, const size_type A_dim[3],
-                                 const size_type B_dim[3],
-                                 const int contractDimA,
-                                 const int contractDimB) {
+__device__ non_differentiable void
+computeStartStep(size_type& A_start, size_type& A_step, size_type& B_start,
+                 size_type& B_step, const int idx, const size_type A_dim[3],
+                 const size_type B_dim[3], const int contractDimA,
+                 const int contractDimB) {
   size_type A_a, A_b, A_c, B_d, B_e, B_f;
 
   switch (contractDimA) {
@@ -173,8 +176,16 @@ int main() {
   float gradB[D3][D4][D5] = {0};
 
   // Execute tensor contraction and its gradient
+  auto start = std::chrono::high_resolution_clock::now();
   tensor_grad.execute(&C[0][0][0][0], &A[0][0][0], &B[0][0][0], D1, D2, D3, D4,
                       D5, &gradC[0][0][0][0], &gradA[0][0][0], &gradB[0][0][0]);
+  cudaDeviceSynchronize();
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+  std::cout << "Time taken by the code block: " << duration.count()
+            << " microseconds" << std::endl;
 
   // Print the result
   std::cout << "Result C:\n";
