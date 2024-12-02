@@ -13,7 +13,6 @@
 // line argument.
 ////////////////////////////////////////////////////////////////////////////////////
 
-
 template<typename... Args>
 __device__ 
 void __enzyme_autodiff(void*, Args...);
@@ -225,7 +224,7 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 
 	// Calculate sigTfactors
 	RSComplex sigTfactors[4]; // Of length input.numL, which is always 4
-	// calculate_sig_T(nuc, E, input, pseudo_K0RS, sigTfactors );
+	calculate_sig_T(nuc, E, input, pseudo_K0RS, sigTfactors );
 
 	// Calculate contributions from window "background" (i.e., poles outside window (pre-calculated)
 	Window w = windows[nuc * max_num_windows + window];
@@ -236,12 +235,14 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 	// Loop over Poles within window, add contributions
 	for( int i = w.start; i < w.end; i++ )
 	{
+		RSComplex PSIIKI;
+		RSComplex CDUM;
 		Pole pole = poles[nuc * max_num_poles + i];
 		RSComplex t1 = {0, 1};
-		RSComplex t2 = {std::sqrt(E), 0 };
-		RSComplex PSIIKI = c_div( t1 , c_sub(pole.MP_EA,t2) );
+		RSComplex t2 = {sqrt(E), 0 };
+		PSIIKI = c_div( t1 , c_sub(pole.MP_EA,t2) );
 		RSComplex E_c = {E, 0};
-		RSComplex CDUM = c_div(PSIIKI, E_c);
+		CDUM = c_div(PSIIKI, E_c);
 		sigT += (c_mul(pole.MP_RT, c_mul(CDUM, sigTfactors[pole.l_value])) ).r;
 		sigA += (c_mul( pole.MP_RA, CDUM)).r;
 		sigF += (c_mul(pole.MP_RF, CDUM)).r;
@@ -278,7 +279,7 @@ __device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E
 
 	// Calculate sigTfactors
 	RSComplex sigTfactors[4]; // Of length input.numL, which is always 4
-	// calculate_sig_T(nuc, E, input, pseudo_K0RS, sigTfactors );
+	calculate_sig_T(nuc, E, input, pseudo_K0RS, sigTfactors );
 
 	// Calculate contributions from window "background" (i.e., poles outside window (pre-calculated)
 	Window w = windows[nuc * max_num_windows + window];
@@ -361,19 +362,19 @@ __device__ void calculate_sig_T( int nuc, double E, Input input, double * pseudo
 	// #pragma unroll
 	for( int i = 0; i < 4; i++ )
 	{
-		// phi = pseudo_K0RS[nuc * input.numL + i] * std::sqrt(E);
+		phi = pseudo_K0RS[nuc * input.numL + i] * sqrt(E);
 
-		// if( i == 1 )
-			// phi -= - std::atan( phi );
-		// else if( i == 2 )
-		// 	phi -= std::atan( 3.0 * phi / (3.0 - phi*phi));
-		// else if( i == 3 )
-		// 	phi -= std::atan(phi*(15.0-phi*phi)/(15.0-6.0*phi*phi));
+		if( i == 1 )
+			phi -= - atan( phi );
+		else if( i == 2 )
+			phi -= atan( 3.0 * phi / (3.0 - phi*phi));
+		else if( i == 3 )
+			phi -= atan(phi*(15.0-phi*phi)/(15.0-6.0*phi*phi));
 
 		phi *= 2.0;
 
-		// sigTfactors[i].r = +cos(phi);
-		// sigTfactors[i].i = -sin(phi);
+		sigTfactors[i].r = +cos(phi);
+		sigTfactors[i].i = -sin(phi);
 	}
 }
 
