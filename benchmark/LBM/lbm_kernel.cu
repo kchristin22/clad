@@ -18,7 +18,6 @@
 // includes, project
 #include "main.h"
 #include "lbm.h"
-#include "clad/Differentiator/Differentiator.h"
 #ifndef __MCUDA__
 #include <cuda.h>
 #else
@@ -200,13 +199,9 @@ __global__ void performStreamCollide_kernel_wrapper( float* srcGrid, float* dstG
 	performStreamCollide_kernel(srcGrid, dstGrid );
 }
 
-int main() {
-	auto grad = clad::gradient(performStreamCollide_kernel_wrapper);
-}
-
 #ifdef ALLOW_AD
 struct Byte20 {
-	char x[SIZE];
+	char x[SIZE_X];
 };
 
 extern __device__ int enzyme_dup;
@@ -217,28 +212,28 @@ __device__ Byte20 __enzyme_augmentfwd(void*, int, size_t, int, float*, float*, i
 __global__ void performStreamCollide_augmented( float* src, float* dsrc, float* dst, float* ddst, Byte20* tape)
 {
 	size_t idx = threadIdx.x + SIZE_X * (blockIdx.x + SIZE_Y * blockIdx.y);
-	tape[idx] = __enzyme_augmentfwd((void*)performStreamCollide_kernel, enzyme_allocated, sizeof(Byte20), enzyme_dup, src, dsrc, enzyme_dup, dst, ddst);
+	// tape[idx] = __enzyme_augmentfwd((void*)performStreamCollide_kernel, enzyme_allocated, sizeof(Byte20), enzyme_dup, src, dsrc, enzyme_dup, dst, ddst);
 }
 
 __device__ void __enzyme_reverse(void*, int, size_t, int, float*, float*, int, float*, float*, Byte20);
 __global__ void performStreamCollide_gradient( float* src, float* dsrc, float* dst, float* ddst, Byte20* tape)
 {
 	size_t idx = threadIdx.x + SIZE_X * (blockIdx.x + SIZE_Y * blockIdx.y);
-	__enzyme_reverse((void*)performStreamCollide_kernel, enzyme_allocated, sizeof(Byte20), enzyme_dup, src, dsrc, enzyme_dup, dst, ddst, tape[idx]);
+	// __enzyme_reverse((void*)performStreamCollide_kernel, enzyme_allocated, sizeof(Byte20), enzyme_dup, src, dsrc, enzyme_dup, dst, ddst, tape[idx]);
 }
 #else
 __device__ Byte20 __enzyme_augmentfwd(void*, int, float*, float*, int, float*, float*);
 __global__ void performStreamCollide_augmented( float* src, float* dsrc, float* dst, float* ddst, Byte20* tape)
 {
 	size_t idx = threadIdx.x + SIZE_X * (blockIdx.x + SIZE_Y * blockIdx.y);
-	tape[idx] = __enzyme_augmentfwd((void*)performStreamCollide_kernel, enzyme_dup, src, dsrc, enzyme_dup, dst, ddst);
+	// tape[idx] = __enzyme_augmentfwd((void*)performStreamCollide_kernel, enzyme_dup, src, dsrc, enzyme_dup, dst, ddst);
 }
 
 __device__ void __enzyme_reverse(void*, int, float*, float*, int, float*, float*, Byte20);
 __global__ void performStreamCollide_gradient( float* src, float* dsrc, float* dst, float* ddst, Byte20* tape)
 {
 	size_t idx = threadIdx.x + SIZE_X * (blockIdx.x + SIZE_Y * blockIdx.y);
-	__enzyme_reverse((void*)performStreamCollide_kernel, enzyme_dup, src, dsrc, enzyme_dup, dst, ddst, tape[idx]);
+	// __enzyme_reverse((void*)performStreamCollide_kernel, enzyme_dup, src, dsrc, enzyme_dup, dst, ddst, tape[idx]);
 }
 #endif
 #endif
