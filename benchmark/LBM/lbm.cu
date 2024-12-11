@@ -34,6 +34,8 @@
 #define REAL_MARGIN (CALC_INDEX(0, 0, 2, 0) - CALC_INDEX(0,0,0,0))
 #define TOTAL_MARGIN (2*PADDED_X*PADDED_Y*N_CELL_ENTRIES)
 
+#include "clad/Differentiator/Differentiator.h"
+
 /******************************************************************************/
 
 __attribute__((noinline))
@@ -139,7 +141,9 @@ __host__ void CUDA_LBM_kernel_loop( int nTimeSteps, LBM_Grid srcGrid, LBM_Grid s
 
 	cudaMemcpy(&here[0], srcGrid + start, N * sizeof(float), cudaMemcpyDeviceToHost);
 #endif
-	__enzyme_autodiff((void*)CUDA_LBM_kernel_loop_inner, nTimeSteps, srcGrid, srcGridb, dstGrid, dstGridb);
+    auto grad = clad::gradient(CUDA_LBM_kernel_loop_inner, "srcGrid, dstGrid");
+    grad.execute(nTimeSteps, srcGrid, dstGrid, srcGridb, dstGridb);
+    // __enzyme_autodiff((void*)CUDA_LBM_kernel_loop_inner, nTimeSteps, srcGrid, srcGridb, dstGrid, dstGridb);
 #ifdef ALLOCATOR
 	delete A;
 #endif
