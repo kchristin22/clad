@@ -93,4 +93,4 @@ edit:
 	vim -p $(source) rsbench.cuh
 
 run:
-	./rsbench -m event
+	./rsbench -m event -l 102000 > output.txt
