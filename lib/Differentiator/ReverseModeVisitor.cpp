@@ -3347,6 +3347,14 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
     if (E->isModifiableLvalue(m_Context) == Expr::MLV_Valid)
       Restore = BuildOp(BO_Assign, Clone(E), Ref);
 
+    if (isInsideLoop) {
+      auto CladTape = MakeCladTapeFor(Clone(E), prefix);
+      Expr* Push = CladTape.Push;
+      Expr* Pop = CladTape.Pop;
+      auto* popAssign = BuildOp(BinaryOperatorKind::BO_Assign, Ref, Pop);
+      return {Push, popAssign};
+    }
+
     return {Store, Restore};
   }
 
