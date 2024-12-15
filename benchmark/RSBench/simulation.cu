@@ -227,7 +227,7 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 		window--;
 
 	// Calculate sigTfactors
-	RSComplex sigTfactors[4]; // Of length input.numL, which is always 4
+	RSComplex sigTfactors[4] = {0.}; // Of length input.numL, which is always 4
 	calculate_sig_T(nuc, E, input, pseudo_K0RS, sigTfactors );
 
 	// Calculate contributions from window "background" (i.e., poles outside window (pre-calculated)
@@ -239,8 +239,8 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 	// Loop over Poles within window, add contributions
 	for( int i = w.start; i < w.end; i++ )
 	{
-		RSComplex PSIIKI;
-		RSComplex CDUM;
+		RSComplex PSIIKI = {0.0, 0.0};
+		RSComplex CDUM = {0.0, 0.0};
 		Pole pole = poles[nuc * max_num_poles + i];
 		RSComplex t1 = {0, 1};
 		RSComplex t2 = {sqrt(E), 0 };
@@ -519,7 +519,7 @@ __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 
 __device__ RSComplex c_add( RSComplex A, RSComplex B)
 {
-	RSComplex C;
+	RSComplex C = {0., 0.};
 	C.r = A.r + B.r;
 	C.i = A.i + B.i;
 	return C;
@@ -527,8 +527,8 @@ __device__ RSComplex c_add( RSComplex A, RSComplex B)
 
 __device__ RSComplex c_sub( RSComplex A, RSComplex B)
 {
-	RSComplex C;
-	C.r = A.r - B.r;
+    RSComplex C = {0., 0.};
+    C.r = A.r - B.r;
 	C.i = A.i - B.i;
 	return C;
 }
@@ -539,8 +539,8 @@ __host__ __device__ RSComplex c_mul( RSComplex A, RSComplex B)
 	double b = A.i;
 	double c = B.r;
 	double d = B.i;
-	RSComplex C;
-	C.r = (a*c) - (b*d);
+    RSComplex C = {0., 0.};
+    C.r = (a*c) - (b*d);
 	C.i = (a*d) + (b*c);
 	return C;
 }
@@ -551,8 +551,8 @@ __device__ RSComplex c_div( RSComplex A, RSComplex B)
 	double b = A.i;
 	double c = B.r;
 	double d = B.i;
-	RSComplex C;
-	double denom = c*c + d*d;
+    RSComplex C = {0., 0.};
+    double denom = c*c + d*d;
 	C.r = ( (a*c) + (b*d) ) / denom;
 	C.i = ( (b*c) - (a*d) ) / denom;
 	return C;
