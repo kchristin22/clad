@@ -150,7 +150,7 @@ __device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input 
 {
 	// zero out macro vector
 	// for( int i = 0; i < 4; i++ )
-		// macro_xs[i] = 0;
+	// 	macro_xs[i] = 0;
 
 	// for nuclide in mat
 	for( int i = 0; i < num_nucs[mat]; i++ )
