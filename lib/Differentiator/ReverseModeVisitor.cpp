@@ -3312,7 +3312,14 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
     assert(E && "must be provided");
     auto Type = utils::getNonConstType(E->getType(), m_Sema);
 
-    if (isInsideLoop) {
+    bool isOutVar = false;
+    if (auto arraySub = dyn_cast<ArraySubscriptExpr>(E))
+      if (auto declRef = dyn_cast<DeclRefExpr>(
+              arraySub->getBase()->IgnoreImpCasts()->IgnoreParens()))
+        if (m_Variables.find(declRef->getDecl()) != m_Variables.end())
+          isOutVar = true;
+
+    if (isInsideLoop && !isOutVar) {
       Expr* clone = Clone(E);
       if (moveToTape && E->getType()->isRecordType()) {
         llvm::SmallVector<Expr*, 1> args = {clone};
