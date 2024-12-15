@@ -3318,7 +3318,14 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
     assert(E && "must be provided");
     auto Type = getNonConstType(E->getType(), m_Context, m_Sema);
 
-    if (isInsideLoop) {
+    bool isOutVar = false;
+    if (auto arraySub = dyn_cast<ArraySubscriptExpr>(E))
+      if (auto declRef = dyn_cast<DeclRefExpr>(
+              arraySub->getBase()->IgnoreImpCasts()->IgnoreParens()))
+        if (m_Variables.find(declRef->getDecl()) != m_Variables.end())
+          isOutVar = true;
+
+    if (isInsideLoop && !isOutVar) {
       auto CladTape = MakeCladTapeFor(Clone(E), prefix);
       Expr* Push = CladTape.Push;
       Expr* Pop = CladTape.Pop;
@@ -3348,6 +3355,14 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
     Stmt* Restore = nullptr;
     if (E->isModifiableLvalue(m_Context) == Expr::MLV_Valid)
       Restore = BuildOp(BO_Assign, Clone(E), Ref);
+
+    if (isInsideLoop) {
+      auto CladTape = MakeCladTapeFor(Clone(E), prefix);
+      Expr* Push = CladTape.Push;
+      Expr* Pop = CladTape.Pop;
+      auto* popAssign = BuildOp(BinaryOperatorKind::BO_Assign, Ref, Pop);
+      return {Push, popAssign};
+    }
 
     return {Store, Restore};
   }
