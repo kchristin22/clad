@@ -169,8 +169,8 @@ __device__ void body( int i, double * __restrict__ macro_xs, int mat, double E, 
 __device__ void calculate_macro_xs( double * __restrict__ macro_xs, int mat, double E, Input input, int * __restrict__ num_nucs, int * __restrict__ mats, int max_num_nucs, double * __restrict__ concs, int * __restrict__ n_windows, double * __restrict__ pseudo_K0Rs, Window * __restrict__ windows, Pole * __restrict__ poles, int max_num_windows, int max_num_poles ) 
 {
 	// zero out macro vector
-	for( int i = 0; i < 4; i++ )
-		macro_xs[i] = 0;
+	// for( int i = 0; i < 4; i++ )
+	// 	macro_xs[i] = 0;
 
 	// for nuclide in mat
 	int sz = num_nucs[mat];
@@ -438,7 +438,7 @@ __device__ RSComplex fast_nuclear_W( RSComplex Z )
 		RSComplex one = {1, 0};
 		RSComplex W = c_div(c_mul(i, ( c_sub(one, fast_cexp(c_mul(t1, Z))) )) , c_mul(t2, Z));
 		RSComplex sum = {0,0};
-		#pragma unroll
+		// #pragma unroll
 		for( int n = 0; n < 10; n++ )
 		{
 			RSComplex t3 = {neg_1n[n], 0};
