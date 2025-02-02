@@ -106,29 +106,31 @@ CUDA_HOST_DEVICE T push(tape<T>& to, ArgsT... val) {
   template <class T>
   struct is_range : decltype(zero_init_detail::is_range<T>(0)) {};
 
-  template <class T> void zero_init(T& t);
+  template <class T> CUDA_HOST_DEVICE void zero_init(T& t);
 
   template <class T,
             typename std::enable_if<!is_range<T>::value, int>::type = 0>
-  void zero_impl(volatile T& t) {
-    // Fill an array with zeros.
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-    unsigned char tmp[sizeof(T)] = {};
-    // Transfer the zeros with the magic function memcpy which can implicitly
-    // create objects in the destination region of storage immediately prior to
-    // copying the sequence of characters to the destination [27.5.1(3)].
-    // (C++ has deprecated the volatile qualifiers. However, we drop them here
-    // to make sure things still work with codebases which still have them)
-    std::memcpy(const_cast<T*>(&t), tmp, sizeof(T));
+  CUDA_HOST_DEVICE void zero_impl(volatile T& t)
+  {
+      // Fill an array with zeros.
+      // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
+      unsigned char tmp[sizeof(T)] = {};
+      // Transfer the zeros with the magic function memcpy which can implicitly
+      // create objects in the destination region of storage immediately prior
+      // to copying the sequence of characters to the destination [27.5.1(3)].
+      // (C++ has deprecated the volatile qualifiers. However, we drop them here
+      // to make sure things still work with codebases which still have them)
+      memcpy(const_cast<T *>(&t), tmp, sizeof(T));
   }
 
   template <class T, typename std::enable_if<is_range<T>::value, int>::type = 0>
-  void zero_impl(T& t) {
-    for (auto& x : t)
-      zero_init(x);
+  CUDA_HOST_DEVICE void zero_impl(T& t)
+  {
+      for (auto& x : t)
+          zero_init(x);
   }
 
-  template <class T> void zero_init(T& t) { zero_impl(t); }
+  template <class T> CUDA_HOST_DEVICE void zero_init(T& t) { zero_impl(t); }
 
   /// Initialize a const sized array.
   // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)
