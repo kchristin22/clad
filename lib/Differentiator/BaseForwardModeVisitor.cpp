@@ -2081,17 +2081,20 @@ StmtDiff BaseForwardModeVisitor::VisitCXXTemporaryObjectExpr(
     derivedArgs.push_back(argDiff.getExpr_dx());
   }
 
+  Expr* clonedArgsE = m_Sema.ActOnInitList(noLoc, clonedArgs, noLoc).get();
+  Expr* derivedArgsE = m_Sema.ActOnInitList(noLoc, derivedArgs, noLoc).get();
+
   Expr* clonedTOE =
       m_Sema
           .ActOnCXXTypeConstructExpr(OpaquePtr<QualType>::make(TOE->getType()),
-                                     utils::GetValidSLoc(m_Sema), clonedArgs,
+                                     utils::GetValidSLoc(m_Sema), clonedArgsE,
                                      utils::GetValidSLoc(m_Sema),
                                      TOE->isListInitialization())
           .get();
   Expr* derivedTOE =
       m_Sema
           .ActOnCXXTypeConstructExpr(OpaquePtr<QualType>::make(TOE->getType()),
-                                     utils::GetValidSLoc(m_Sema), derivedArgs,
+                                     utils::GetValidSLoc(m_Sema), derivedArgsE,
                                      utils::GetValidSLoc(m_Sema),
                                      TOE->isListInitialization())
           .get();
