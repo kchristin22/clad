@@ -991,8 +991,7 @@ StmtDiff BaseForwardModeVisitor::VisitDeclRefExpr(const DeclRefExpr* DRE) {
   if (clonedDRE->getType()->isPointerType())
     return StmtDiff(clonedDRE, nullptr);
   QualType literalTy = utils::GetValueType(clonedDRE->getType());
-  return StmtDiff(clonedDRE, ConstantFolder::synthesizeLiteral(
-                                 literalTy, m_Context, /*val=*/0));
+  return StmtDiff(clonedDRE, getZeroInit(literalTy));
 }
 
 StmtDiff BaseForwardModeVisitor::VisitIntegerLiteral(const IntegerLiteral* IL) {
@@ -1084,9 +1083,17 @@ StmtDiff BaseForwardModeVisitor::VisitCallExpr(const CallExpr* CE) {
         baseOriginalE = OCE->getArg(0);
       baseDiff = Visit(baseOriginalE);
       Expr* baseDerivative = baseDiff.getExpr_dx();
-      if (!baseDerivative->getType()->isPointerType())
-        baseDerivative = BuildOp(UnaryOperatorKind::UO_AddrOf, baseDerivative);
-      diffArgs.push_back(baseDerivative);
+      if (baseDerivative) {
+        if (!baseDerivative->getType()->isPointerType())
+          baseDerivative =
+              BuildOp(UnaryOperatorKind::UO_AddrOf, baseDerivative);
+        diffArgs.push_back(baseDerivative);
+      } else {
+        // If the base object is not differentiable, then the derivative of the
+        // function call is 0.
+        Expr* zero = getZeroInit(FD->getReturnType());
+        return StmtDiff(Clone(CE), zero);
+      }
     }
   }
 

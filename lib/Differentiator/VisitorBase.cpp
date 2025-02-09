@@ -459,7 +459,8 @@ namespace clad {
           adjParams.push_back(getZeroInit(FD->getType()));
         return m_Sema.ActOnInitList(noLoc, adjParams, noLoc).get();
       }
-    return m_Sema.ActOnInitList(noLoc, {}, noLoc).get();
+    Expr* nullPtr = m_Sema.ActOnCXXNullPtrLiteral(noLoc).get();
+    return m_Sema.ImpCastExprToType(nullPtr, T, CK_NullToPointer).get();
   }
 
   std::pair<const clang::Expr*, llvm::SmallVector<const clang::Expr*, 4>>
