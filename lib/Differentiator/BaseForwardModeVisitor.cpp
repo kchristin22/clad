@@ -826,6 +826,8 @@ StmtDiff BaseForwardModeVisitor::VisitMemberExpr(const MemberExpr* ME) {
     if (clad::utils::hasNonDifferentiableAttribute(ME))
       return {clonedME, zero};
     auto baseDiff = Visit(ME->getBase());
+    if (!baseDiff.getExpr_dx())
+      return {clonedME};
     // No derivative found for base. Therefore, derivative is 0.
     if (isa<IntegerLiteral>(baseDiff.getExpr_dx()) ||
         isa<FloatingLiteral>(baseDiff.getExpr_dx()))
@@ -1991,7 +1993,8 @@ BaseForwardModeVisitor::VisitCXXConstructExpr(const CXXConstructExpr* CE) {
   for (auto arg : CE->arguments()) {
     auto argDiff = Visit(arg);
     clonedArgs.push_back(argDiff.getExpr());
-    derivedArgs.push_back(argDiff.getExpr_dx());
+    if (argDiff.getExpr_dx())
+      derivedArgs.push_back(argDiff.getExpr_dx());
   }
 
   Expr* pushforwardCall =

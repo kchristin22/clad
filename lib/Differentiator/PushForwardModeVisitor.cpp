@@ -44,11 +44,16 @@ StmtDiff PushForwardModeVisitor::VisitReturnStmt(const ReturnStmt* RS) {
                                  BuildParens(retVal_dx))
             .get();
   }
-  llvm::SmallVector<Expr*, 2> returnValues = {retVal, retVal_dx};
-  // This can instantiate as part of the move or copy initialization and
-  // needs a fake source location.
+  Expr* initList = nullptr;
   SourceLocation fakeLoc = utils::GetValidSLoc(m_Sema);
-  Expr* initList = m_Sema.ActOnInitList(fakeLoc, returnValues, noLoc).get();
+  if (retVal_dx) {
+    llvm::SmallVector<Expr*, 2> returnValues = {retVal, retVal_dx};
+    // This can instantiate as part of the move or copy initialization and
+    // needs a fake source location.
+    initList = m_Sema.ActOnInitList(fakeLoc, returnValues, noLoc).get();
+  } else
+    initList = m_Sema.ActOnInitList(fakeLoc, retVal, noLoc).get();
+
   Stmt* returnStmt =
       m_Sema.ActOnReturnStmt(fakeLoc, initList, getCurrentScope()).get();
   return StmtDiff(returnStmt);
