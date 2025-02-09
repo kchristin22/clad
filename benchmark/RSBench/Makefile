@@ -45,7 +45,7 @@ CFLAGS := -mllvm -max-heap-to-stack-size=1000000
 
 CC := $(CLANG_PATH)
 CFLAGS := --cuda-path=$(CUDA_PATH) -L$(CUDA_PATH)/lib64 --cuda-gpu-arch=sm_$(SM_VERSION) \
-          -std=c++17 -Xclang -add-plugin -Xclang clad -Xclang -load -Xclang $(CLAD_PATH) -I../../include
+          -std=c++17 -Xclang -add-plugin -Xclang clad -Xclang -plugin-arg-clad -Xclang -fgenerate-source-file -Xclang -load -Xclang $(CLAD_PATH) -I../../include
 
 # Linker Flags
 LDFLAGS = "-lcudart_static" "-ldl" "-lrt" -lpthread -lm -lstdc++ 
@@ -93,4 +93,4 @@ edit:
 	vim -p $(source) rsbench.cuh
 
 run:
-	./rsbench -m event -l 102000
+	./rsbench -m event

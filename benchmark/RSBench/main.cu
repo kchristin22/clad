@@ -6,7 +6,7 @@ int main(int argc, char * argv[])
 	// Initialization & Command Line Read-In
 	// =====================================================================
 
-	int version = 12;
+	int version = 13;
 	double start, stop;
 	
 	// Process CLI Fields
@@ -53,7 +53,7 @@ int main(int argc, char * argv[])
 	if( input.simulation_method == EVENT_BASED )
 	{
 		if( input.kernel_id == 0 )
-			run_event_based_simulation(input, GSD, SD, &vhash );
+			run_event_based_simulation(input, GSD, &vhash );
 		else if( input.kernel_id == 1 )
 			run_event_based_simulation_optimization_1(input, GSD, &vhash );
 		else
