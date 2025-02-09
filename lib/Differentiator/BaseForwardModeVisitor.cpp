@@ -1113,6 +1113,7 @@ StmtDiff BaseForwardModeVisitor::VisitCallExpr(const CallExpr* CE) {
     skipFirstArg = true;
 
   // For f(g(x)) = f'(x) * g'(x)
+  std::size_t numParams = FD->getNumParams();
   Expr* Multiplier = nullptr;
   for (size_t i = skipFirstArg, e = CE->getNumArgs(); i < e; ++i) {
     const Expr* arg = CE->getArg(i);
@@ -1121,7 +1122,11 @@ StmtDiff BaseForwardModeVisitor::VisitCallExpr(const CallExpr* CE) {
     // If original argument is an RValue and function expects an RValue
     // parameter, then convert the cloned argument and the corresponding
     // derivative to RValue if they are not RValue.
-    QualType paramType = FD->getParamDecl(i - skipFirstArg)->getType();
+    QualType paramType;
+    if (FD->isVariadic() && (i - skipFirstArg) >= numParams)
+      paramType = CE->getArg(i - skipFirstArg)->getType();
+    else
+      paramType = FD->getParamDecl(i - skipFirstArg)->getType();
     if (utils::IsRValue(arg) && paramType->isRValueReferenceType()) {
       if (!utils::IsRValue(argDiff.getExpr())) {
         Expr* castE = utils::BuildStaticCastToRValue(m_Sema, argDiff.getExpr());
