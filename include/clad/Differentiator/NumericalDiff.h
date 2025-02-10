@@ -272,35 +272,34 @@ namespace numerical_diff {
         h = 0;
         // calculate f[x+h, x-h]
         // f(..., x+h,...)
-        precision xaf = f(updateIndexParamValue(std::forward<Args>(args), Ints,
-                                                i, /*multiplier=*/1, h,
-                                                _grad[Ints].size(), j)...);
-        precision xbf = f(updateIndexParamValue(std::forward<Args>(args), Ints,
-                                                i, /*multiplier=*/-1, h,
-                                                _grad[Ints].size(), j)...);
+        // Lambda to create lvalues for each argument
+        auto make_lvalue = [&](std::size_t idx, int multiplier) -> auto {
+          return updateIndexParamValue(std::forward<Args>(args)..., idx, i,
+                                       multiplier, h, _grad[idx].size(), j);
+        };
+
+        // Expand and store arguments in temporary variables
+        auto tempArgs1 = std::make_tuple(make_lvalue(Ints, 1)...);
+        auto tempArgs2 = std::make_tuple(make_lvalue(Ints, -1)...);
+
+        // Pass lvalues to `f`
+        precision xaf = std::apply(f, tempArgs1);
+        precision xbf = std::apply(f, tempArgs2);
         precision xf1 = (xaf - xbf) / (h + h);
 
         // calculate f[x+2h, x-2h]
-        precision xaf2 = f(updateIndexParamValue(std::forward<Args>(args), Ints,
-                                                 i,
-                                                 /*multiplier=*/2, h,
-                                                 _grad[Ints].size(), j)...);
-        precision xbf2 = f(updateIndexParamValue(std::forward<Args>(args), Ints,
-                                                 i,
-                                                 /*multiplier=*/-2, h,
-                                                 _grad[Ints].size(), j)...);
+        tempArgs1 = std::make_tuple(make_lvalue(Ints, 2)...);
+        tempArgs2 = std::make_tuple(make_lvalue(Ints, -2)...);
+        precision xaf2 = std::apply(f, tempArgs1);
+        precision xbf2 = std::apply(f, tempArgs2);
         precision xf2 = (xaf2 - xbf2) / (2 * h + 2 * h);
 
         if (printErrors) {
           // calculate f(x+3h) and f(x-3h)
-          precision xaf3 = f(updateIndexParamValue(std::forward<Args>(args),
-                                                   Ints, i,
-                                                   /*multiplier=*/3, h,
-                                                   _grad[Ints].size(), j)...);
-          precision xbf3 = f(updateIndexParamValue(std::forward<Args>(args),
-                                                   Ints, i,
-                                                   /*multiplier=*/-3, h,
-                                                   _grad[Ints].size(), j)...);
+          tempArgs1 = std::make_tuple(make_lvalue(Ints, 3)...);
+          tempArgs2 = std::make_tuple(make_lvalue(Ints, -3)...);
+          precision xaf3 = std::apply(f, tempArgs1);
+          precision xbf3 = std::apply(f, tempArgs2);
           // Error in derivative due to the five-point stencil formula
           // E(f'(x)) = f`````(x) * h^4 / 30 + O(h^5) (Taylor Approx) and
           // f`````(x) = (f[x+3h, x-3h] - 4f[x+2h, x-2h] + 5f[x+h, x-h])/(2 *
@@ -351,29 +350,34 @@ namespace numerical_diff {
       precision h = 0;
       // calculate f[x+h, x-h]
       // f(..., x+h,...)
-      precision xaf = f(updateIndexParamValue(std::forward<Args>(args), Ints, i,
-                                              /*multiplier=*/1, h)...);
-      precision xbf = f(updateIndexParamValue(std::forward<Args>(args), Ints, i,
-                                              /*multiplier=*/-1, h)...);
+      // Lambda to create lvalues for each argument
+      auto make_lvalue = [&](std::size_t idx, int multiplier) -> auto {
+        return updateIndexParamValue(std::forward<Args>(args)..., idx, i,
+                                     multiplier, h);
+      };
+
+      // Expand and store arguments in temporary variables
+      auto tempArgs1 = std::make_tuple(make_lvalue(Ints, 1)...);
+      auto tempArgs2 = std::make_tuple(make_lvalue(Ints, -1)...);
+
+      // Pass lvalues to `f`
+      precision xaf = std::apply(f, tempArgs1);
+      precision xbf = std::apply(f, tempArgs2);
       precision xf1 = (xaf - xbf) / (h + h);
 
       // calculate f[x+2h, x-2h]
-      precision xaf2 =
-          f(updateIndexParamValue(std::forward<Args>(args), Ints, i,
-                                  /*multiplier=*/2, h)...);
-      precision xbf2 =
-          f(updateIndexParamValue(std::forward<Args>(args), Ints, i,
-                                  /*multiplier=*/-2, h)...);
+      tempArgs1 = std::make_tuple(make_lvalue(Ints, 2)...);
+      tempArgs2 = std::make_tuple(make_lvalue(Ints, -2)...);
+      precision xaf2 = std::apply(f, tempArgs1);
+      precision xbf2 = std::apply(f, tempArgs2);
       precision xf2 = (xaf2 - xbf2) / (2 * h + 2 * h);
 
       if (printErrors) {
         // calculate f(x+3h) and f(x-3h)
-        precision xaf3 =
-            f(updateIndexParamValue(std::forward<Args>(args), Ints, i,
-                                    /*multiplier=*/3, h)...);
-        precision xbf3 =
-            f(updateIndexParamValue(std::forward<Args>(args), Ints, i,
-                                    /*multiplier=*/-3, h)...);
+        tempArgs1 = std::make_tuple(make_lvalue(Ints, 3)...);
+        tempArgs2 = std::make_tuple(make_lvalue(Ints, -3)...);
+        precision xaf3 = std::apply(f, tempArgs1);
+        precision xbf3 = std::apply(f, tempArgs2);
         // Error in derivative due to the five-point stencil formula
         // E(f'(x)) = f`````(x) * h^4 / 30 + O(h^5) (Taylor Approx) and
         // f`````(x) = (f[x+3h, x-3h] - 4f[x+2h, x-2h] + 5f[x+h, x-h])/(2 *
@@ -441,27 +445,35 @@ namespace numerical_diff {
 
     precision xaf, xbf, xaf2, xbf2, xf1, xf2, dx, h = 0;
     // calculate f[x+h, x-h]
-    xaf = f(updateIndexParamValue(std::forward<Args>(args), Ints, n,
-                                  /*multiplier=*/1, h, arrLen, arrIdx)...);
-    xbf = f(updateIndexParamValue(std::forward<Args>(args), Ints, n,
-                                  /*multiplier=*/-1, h, arrLen, arrIdx)...);
+    // Lambda to create lvalues for each argument
+    auto make_lvalue = [&](std::size_t idx, int multiplier) -> auto {
+      return updateIndexParamValue(std::forward<Args>(args)..., idx, n,
+                                   multiplier, h, arrLen, arrIdx);
+    };
+
+    // Expand and store arguments in temporary variables
+    auto tempArgs1 = std::make_tuple(make_lvalue(Ints, 1)...);
+    auto tempArgs2 = std::make_tuple(make_lvalue(Ints, -1)...);
+
+    // Pass lvalues to `f`
+    xaf = std::apply(f, tempArgs1);
+    xbf = std::apply(f, tempArgs2);
     xf1 = (xaf - xbf) / (h + h);
 
     // calculate f[x+2h, x-2h]
-    xaf2 = f(updateIndexParamValue(std::forward<Args>(args), Ints, n,
-                                   /*multiplier=*/2, h, arrLen, arrIdx)...);
-    xbf2 = f(updateIndexParamValue(std::forward<Args>(args), Ints, n,
-                                   /*multiplier=*/-2, h, arrLen, arrIdx)...);
+    tempArgs1 = std::make_tuple(make_lvalue(Ints, 2)...);
+    tempArgs2 = std::make_tuple(make_lvalue(Ints, -2)...);
+
+    xaf2 = std::apply(f, tempArgs1);
+    xbf2 = std::apply(f, tempArgs2);
     xf2 = (xaf2 - xbf2) / (2 * h + 2 * h);
 
     if (printErrors) {
       // calculate f(x+3h) and f(x-3h)
-      precision xaf3 = f(
-          updateIndexParamValue(std::forward<Args>(args), Ints, n,
-                                /*multiplier=*/3, h, arrLen, arrIdx)...);
-      precision xbf3 = f(
-          updateIndexParamValue(std::forward<Args>(args), Ints, n,
-                                /*multiplier=*/-3, h, arrLen, arrIdx)...);
+      tempArgs1 = std::make_tuple(make_lvalue(Ints, 3)...);
+      tempArgs2 = std::make_tuple(make_lvalue(Ints, -3)...);
+      precision xaf3 = std::apply(f, tempArgs1);
+      precision xbf3 = std::apply(f, tempArgs2);
       // Error in derivative due to the five-point stencil formula
       // E(f'(x)) = f`````(x) * h^4 / 30 + O(h^5) (Taylor Approx) and
       // f`````(x) = (f[x+3h, x-3h] - 4f[x+2h, x-2h] + 5f[x+h, x-h])/(2 * h^5)
