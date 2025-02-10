@@ -1084,9 +1084,18 @@ StmtDiff BaseForwardModeVisitor::VisitCallExpr(const CallExpr* CE) {
       baseDiff = Visit(baseOriginalE);
       Expr* baseDerivative = baseDiff.getExpr_dx();
       if (baseDerivative) {
-        if (!baseDerivative->getType()->isPointerType())
-          baseDerivative =
-              BuildOp(UnaryOperatorKind::UO_AddrOf, baseDerivative);
+        if (!baseDerivative->getType()->isPointerType()){
+            if (auto tmp = dyn_cast<CXXTemporaryObjectExpr>(baseDerivative)) {
+                auto *tmpVar = BuildVarDecl(tmp->getType(), "_t",
+                                            baseDerivative);
+                addToCurrentBlock(BuildDeclStmt(tmpVar));
+                auto *tmpVarRef = BuildDeclRef(tmpVar);
+                baseDerivative =
+                    BuildOp(UnaryOperatorKind::UO_AddrOf, tmpVarRef);
+            } else
+                baseDerivative =
+                  BuildOp(UnaryOperatorKind::UO_AddrOf, baseDerivative);
+        }
         diffArgs.push_back(baseDerivative);
       } else {
         // If the base object is not differentiable, then the derivative of the
@@ -1155,8 +1164,15 @@ StmtDiff BaseForwardModeVisitor::VisitCallExpr(const CallExpr* CE) {
   auto customDerivativeArgs = pushforwardFnArgs;
 
   if (Expr* baseE = baseDiff.getExpr()) {
-    if (!baseE->getType()->isPointerType())
-      baseE = BuildOp(UnaryOperatorKind::UO_AddrOf, baseE);
+    if (!baseE->getType()->isPointerType()) {
+        if (auto tmp = dyn_cast<CXXTemporaryObjectExpr>(baseE)) {
+          auto *tmpVar = BuildVarDecl(tmp->getType(), "_t", baseE);
+          addToCurrentBlock(BuildDeclStmt(tmpVar));
+          auto *tmpVarRef = BuildDeclRef(tmpVar);
+          baseE = BuildOp(UnaryOperatorKind::UO_AddrOf, tmpVarRef);
+        } else
+          baseE = BuildOp(UnaryOperatorKind::UO_AddrOf, baseE);
+    }
     customDerivativeArgs.insert(customDerivativeArgs.begin(), baseE);
   }
 
