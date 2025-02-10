@@ -34,10 +34,22 @@ StmtDiff PushForwardModeVisitor::VisitReturnStmt(const ReturnStmt* RS) {
     // Add a cast to the return type.
     TypeSourceInfo* TSI =
         m_Context.getTrivialTypeSourceInfo(m_DiffReq->getReturnType());
+    if (m_DiffReq->getReturnType()->isLValueReferenceType() &&
+        utils::IsRValue(retVal)) {
+      auto* tmpDecl = BuildVarDecl(retVal->getType(), "_t", retVal);
+      addToCurrentBlock(BuildDeclStmt(tmpDecl));
+      retVal = BuildDeclRef(tmpDecl);
+    }
     retVal = m_Sema
                  .BuildCStyleCastExpr(RS->getBeginLoc(), TSI, RS->getEndLoc(),
                                       BuildParens(retVal))
                  .get();
+    if (m_DiffReq->getReturnType()->isLValueReferenceType() &&
+        utils::IsRValue(retVal_dx)) {
+      auto* tmpDecl = BuildVarDecl(retVal_dx->getType(), "_t", retVal_dx);
+      addToCurrentBlock(BuildDeclStmt(tmpDecl));
+      retVal_dx = BuildDeclRef(tmpDecl);
+    }
     retVal_dx =
         m_Sema
             .BuildCStyleCastExpr(RS->getBeginLoc(), TSI, RS->getEndLoc(),
