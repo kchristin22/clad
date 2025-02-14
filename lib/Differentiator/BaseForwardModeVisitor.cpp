@@ -1611,6 +1611,8 @@ StmtDiff BaseForwardModeVisitor::VisitDeclStmt(const DeclStmt* DS) {
         decls.push_back(SADDiff.getDecl());
       if (SADDiff.getDecl_dx())
         declsDiff.push_back(SADDiff.getDecl_dx());
+    } else if (auto TD = dyn_cast<TypeDecl>(D)) {
+      decls.push_back(TD);
     } else {
       diag(DiagnosticsEngine::Warning, D->getEndLoc(),
            "Unsupported declaration");
