@@ -98,11 +98,16 @@ __global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD )
 	double d_macro_xs[4] = {0};
 	d_macro_xs[0] = 1.0;
 
+    size_t sz = GSD.length_poles * sizeof(Pole);
+    Pole *d_poles = new Pole[GSD.length_poles];
+    memcpy(d_poles, GSD.d_poles, sz);
+
     auto grad = clad::gradient(calculate_macro_xs, "macro_xs, poles");
     grad.execute(macro_xs, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs,
                  GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows,
                  GSD.poles, GSD.max_num_windows, GSD.max_num_poles, d_macro_xs,
-                 GSD.d_poles);
+                 d_poles);
+	free(d_poles);
 
 	// __enzyme_autodiff((void*)calculate_macro_xs,
 	// 			enzyme_dup,   macro_xs, d_macro_xs,
