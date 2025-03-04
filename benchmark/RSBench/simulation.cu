@@ -98,16 +98,15 @@ __global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD )
 	double d_macro_xs[4] = {0};
 	d_macro_xs[0] = 1.0;
 
-    size_t sz = GSD.length_poles * sizeof(Pole);
-    Pole *d_poles = new Pole[GSD.length_poles];
-    memcpy(d_poles, GSD.d_poles, sz);
+    // size_t sz = GSD.length_poles * sizeof(Pole);
+    // Pole *d_poles = new Pole[GSD.length_poles];
+    // memcpy(d_poles, GSD.d_poles, sz);
 
-    auto grad = clad::gradient(calculate_macro_xs, "macro_xs, poles");
+    auto grad = clad::gradient(calculate_macro_xs, "macro_xs");
     grad.execute(macro_xs, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs,
                  GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows,
-                 GSD.poles, GSD.max_num_windows, GSD.max_num_poles, d_macro_xs,
-                 d_poles);
-	free(d_poles);
+                 GSD.poles, GSD.max_num_windows, GSD.max_num_poles, d_macro_xs);
+// free(d_poles);
 
 	// __enzyme_autodiff((void*)calculate_macro_xs,
 	// 			enzyme_dup,   macro_xs, d_macro_xs,
@@ -146,7 +145,7 @@ __global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD )
 	GSD.verification[i] = max_idx+1;
 }
 
-__device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input input, int * num_nucs, int * mats, int max_num_nucs, double * concs, int * n_windows, double * pseudo_K0Rs, Window * windows, Pole * poles, int max_num_windows, int max_num_poles ) 
+__device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input input, const int * num_nucs, const int * mats, int max_num_nucs, const double * concs, const int * n_windows, const double * pseudo_K0Rs, const Window * windows, const Pole * poles, int max_num_windows, int max_num_poles ) 
 {
 	// zero out macro vector
 	// for( int i = 0; i < 4; i++ )
@@ -182,7 +181,7 @@ __device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input 
 }
 
 // No Temperature dependence (i.e., 0K evaluation)
-__device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input input, int * n_windows, double * pseudo_K0RS, Window * windows, Pole * poles, int max_num_windows, int max_num_poles)
+__device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, const Pole * poles, int max_num_windows, int max_num_poles)
 {
 	// MicroScopic XS's to Calculate
 	double sigT;
@@ -233,7 +232,7 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 // Temperature Dependent Variation of Kernel
 // (This involves using the Complex Faddeeva function to
 // Doppler broaden the poles within the window)
-__device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E, Input input, int * n_windows, double * pseudo_K0RS, Window * windows, Pole * poles, int max_num_windows, int max_num_poles )
+__device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, const Pole * poles, int max_num_windows, int max_num_poles )
 {
 	// MicroScopic XS's to Calculate
 	double sigT;
@@ -323,7 +322,7 @@ __device__ int pick_mat( uint64_t * seed )
 	return 0;
 }
 
-__device__ void calculate_sig_T( int nuc, double E, Input input, double * pseudo_K0RS, RSComplex * sigTfactors )
+__device__ void calculate_sig_T( int nuc, double E, Input input, const double * pseudo_K0RS, RSComplex * sigTfactors )
 {
 	double phi;
 
