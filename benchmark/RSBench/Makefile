@@ -9,10 +9,10 @@ CLANG_PATH ?= /usr/lib/llvm-17/bin/clang++
 # ENZYME_PATH ?= /home/wmoses/git/Enzyme/enzyme/build13D/Enzyme/ClangEnzyme-13.so
 # CLANG_PATH ?= /mnt/sabrent/wmoses/llvm13/buildall/bin/clang++
 
-OPTIMIZE    ?= yes
+OPTIMIZE    ?= no
 
 FORWARD     ?= no
-INLINE      ?= yes
+INLINE      ?= no
 
 DEBUG       = no
 PROFILE     = no
@@ -44,7 +44,7 @@ CFLAGS := -mllvm -max-heap-to-stack-size=1000000
 # -Rpass=attributor -mllvm -debug -mllvm -debug-only=attributor
 
 CC := $(CLANG_PATH)
-CFLAGS := --cuda-path=$(CUDA_PATH) -L$(CUDA_PATH)/lib64 --cuda-gpu-arch=sm_$(SM_VERSION) \
+CFLAGS :=  -g -Og --cuda-path=$(CUDA_PATH) -L$(CUDA_PATH)/lib64 --cuda-gpu-arch=sm_$(SM_VERSION) \
           -std=c++17 -Xclang -add-plugin -Xclang clad -Xclang -plugin-arg-clad -Xclang -fgenerate-source-file -Xclang -load -Xclang $(CLAD_PATH) -I../../include
 
 # Linker Flags
