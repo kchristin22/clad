@@ -17,23 +17,20 @@ void calculate_micro_xs_doppler_pullback(
     double *micro_xs, int nuc, double E, Input input, const int *n_windows,
     const double *pseudo_K0RS, const Window *windows, const Pole *poles,
     int max_num_windows, int max_num_poles, double *_d_micro_xs, int *_d_nuc,
-    double *_d_E, Input *_d_input, int *_d_max_num_windows,
+    double *_d_E, Input *_d_input, Pole *_d_poles, int *_d_max_num_windows,
     int *_d_max_num_poles) __attribute__((device));
-void calculate_micro_xs_pullback(double *micro_xs, int nuc, double E,
-                                 Input input, const int *n_windows,
-                                 const double *pseudo_K0RS,
-                                 const Window *windows, const Pole *poles,
-                                 int max_num_windows, int max_num_poles,
-                                 double *_d_micro_xs, int *_d_nuc, double *_d_E,
-                                 Input *_d_input, int *_d_max_num_windows,
-                                 int *_d_max_num_poles) __attribute__((device));
-void calculate_macro_xs_grad_0(double *macro_xs, int mat, double E, Input input,
-                               const int *num_nucs, const int *mats,
-                               int max_num_nucs, const double *concs,
-                               const int *n_windows, const double *pseudo_K0Rs,
-                               const Window *windows, const Pole *poles,
-                               int max_num_windows, int max_num_poles,
-                               double *_d_macro_xs) __attribute__((device))
+void calculate_micro_xs_pullback(
+    double *micro_xs, int nuc, double E, Input input, const int *n_windows,
+    const double *pseudo_K0RS, const Window *windows, const Pole *poles,
+    int max_num_windows, int max_num_poles, double *_d_micro_xs, int *_d_nuc,
+    double *_d_E, Input *_d_input, Pole *_d_poles, int *_d_max_num_windows,
+    int *_d_max_num_poles) __attribute__((device));
+void calculate_macro_xs_grad_0_11(
+    double *macro_xs, int mat, double E, Input input, const int *num_nucs,
+    const int *mats, int max_num_nucs, const double *concs,
+    const int *n_windows, const double *pseudo_K0Rs, const Window *windows,
+    const Pole *poles, int max_num_windows, int max_num_poles,
+    double *_d_macro_xs, Pole *_d_poles) __attribute__((device))
 {
     int _d_mat = 0;
     double _d_E = 0.;
@@ -45,7 +42,7 @@ void calculate_macro_xs_grad_0(double *macro_xs, int mat, double E, Input input,
     int i = 0;
     clad::tape<clad::array<double>> _t1 = {};
     double _d_micro_xs[4] = {0};
-    clad::array<double> micro_xs(4);
+    clad::array<double> micro_xs(4UL);
     clad::tape<int> _t2 = {};
     int _d_nuc = 0;
     int nuc = 0;
@@ -63,7 +60,7 @@ void calculate_macro_xs_grad_0(double *macro_xs, int mat, double E, Input input,
                 break;
         }
         _t0++;
-        clad::push(_t1, std::move(micro_xs)), micro_xs = {0.};
+        // clad::push(_t1, std::move(micro_xs)), micro_xs = {0.};
         clad::push(_t2, nuc), nuc = mats[mat * max_num_nucs + i];
         {
             clad::push(_cond0, input.doppler == 1);
@@ -127,7 +124,7 @@ void calculate_macro_xs_grad_0(double *macro_xs, int mat, double E, Input input,
                 calculate_micro_xs_doppler_pullback(
                     micro_xs, nuc, E, input, n_windows, pseudo_K0Rs, windows,
                     poles, max_num_windows, max_num_poles, _d_micro_xs, &_r0,
-                    &_r1, &_r2, &_r3, &_r4);
+                    &_r1, &_r2, _d_poles, &_r3, &_r4);
                 _d_nuc += _r0;
                 _d_E += _r1;
                 _d_max_num_windows += _r3;
@@ -144,7 +141,7 @@ void calculate_macro_xs_grad_0(double *macro_xs, int mat, double E, Input input,
                 calculate_micro_xs_pullback(
                     micro_xs, nuc, E, input, n_windows, pseudo_K0Rs, windows,
                     poles, max_num_windows, max_num_poles, _d_micro_xs, &_r5,
-                    &_r6, &_r7, &_r8, &_r9);
+                    &_r6, &_r7, _d_poles, &_r8, &_r9);
                 _d_nuc += _r5;
                 _d_E += _r6;
                 _d_max_num_windows += _r8;
@@ -158,7 +155,7 @@ void calculate_macro_xs_grad_0(double *macro_xs, int mat, double E, Input input,
         }
         {
             clad::zero_init(_d_micro_xs);
-            micro_xs = clad::pop(_t1);
+            // micro_xs = clad::pop(_t1);
         }
     }
 }
@@ -178,7 +175,7 @@ void calculate_micro_xs_doppler_pullback(
     double *micro_xs, int nuc, double E, Input input, const int *n_windows,
     const double *pseudo_K0RS, const Window *windows, const Pole *poles,
     int max_num_windows, int max_num_poles, double *_d_micro_xs, int *_d_nuc,
-    double *_d_E, Input *_d_input, int *_d_max_num_windows,
+    double *_d_E, Input *_d_input, Pole *_d_poles, int *_d_max_num_windows,
     int *_d_max_num_poles) __attribute__((device))
 {
     bool _cond0;
@@ -356,21 +353,19 @@ void calculate_micro_xs_doppler_pullback(
 }
 void c_div_pullback(RSComplex A, RSComplex B, RSComplex _d_y, RSComplex *_d_A,
                     RSComplex *_d_B) __attribute__((device));
-inline constexpr void operator_equal_pullback(RSComplex &this_1,
-                                              RSComplex &&arg, RSComplex _d_y,
+inline constexpr void operator_equal_pullback(RSComplex &this_1, RSComplex &&arg,
+                                              RSComplex _d_y,
                                               RSComplex *_d_this,
                                               RSComplex *_d_arg) noexcept;
 inline constexpr clad::ValueAndAdjoint<RSComplex &, RSComplex &>
 operator_equal_forw(RSComplex &this_1, RSComplex &&arg, RSComplex *_d_this,
                     RSComplex &&_d_arg) noexcept;
-void calculate_micro_xs_pullback(double *micro_xs, int nuc, double E,
-                                 Input input, const int *n_windows,
-                                 const double *pseudo_K0RS,
-                                 const Window *windows, const Pole *poles,
-                                 int max_num_windows, int max_num_poles,
-                                 double *_d_micro_xs, int *_d_nuc, double *_d_E,
-                                 Input *_d_input, int *_d_max_num_windows,
-                                 int *_d_max_num_poles) __attribute__((device))
+void calculate_micro_xs_pullback(
+    double *micro_xs, int nuc, double E, Input input, const int *n_windows,
+    const double *pseudo_K0RS, const Window *windows, const Pole *poles,
+    int max_num_windows, int max_num_poles, double *_d_micro_xs, int *_d_nuc,
+    double *_d_E, Input *_d_input, Pole *_d_poles, int *_d_max_num_windows,
+    int *_d_max_num_poles) __attribute__((device))
 {
     bool _cond0;
     int _d_i = 0;
@@ -436,8 +431,8 @@ void calculate_micro_xs_pullback(double *micro_xs, int nuc, double E,
         clad::push(_t6, PSIIKI);
         clad::ValueAndAdjoint<RSComplex &, RSComplex &> _t7 =
             operator_equal_forw(clad::back(_t6),
-                                c_div(t1, c_sub(pole.MP_EA, t2)), &_d_PSIIKI,
-                                {0., 0.});
+                                    c_div(t1, c_sub(pole.MP_EA, t2)),
+                                &_d_PSIIKI, {0., 0.});
         clad::push(_t8, std::move(E_c)), E_c = {E, 0};
         clad::push(_t9, CDUM);
         clad::ValueAndAdjoint<RSComplex &, RSComplex &> _t10 =
@@ -506,7 +501,7 @@ void calculate_micro_xs_pullback(double *micro_xs, int nuc, double E,
             {
                 RSComplex _r6 = {0., 0.};
                 operator_equal_pullback(clad::back(_t6),
-                                        c_div(t1, c_sub(pole.MP_EA, t2)),
+                                            c_div(t1, c_sub(pole.MP_EA, t2)),
                                         {0., 0.}, &_d_PSIIKI, &_r6);
                 RSComplex _r7 = {0., 0.};
                 RSComplex _r8 = {0., 0.};
@@ -677,7 +672,9 @@ void calculate_sig_T_pullback(int nuc, double E, Input input,
                 phi = clad::pop(_t3);
                 double _r_d1 = _d_phi;
                 double _r1 = 0.;
-                clad::custom_derivatives::atan_pullback(phi, _r_d1, &_r1);
+                _r1 +=
+                    _r_d1 * clad::custom_derivatives::atan_pushforward(phi, 1.)
+                                .pushforward;
                 _d_phi += _r1;
             }
             else
@@ -687,9 +684,10 @@ void calculate_sig_T_pullback(int nuc, double E, Input input,
                     phi = clad::pop(_t4);
                     double _r_d2 = _d_phi;
                     double _r2 = 0.;
-                    clad::custom_derivatives::atan_pullback(
-                        3. * phi / clad::push(_t5, (3. - phi * phi)), -_r_d2,
-                        &_r2);
+                    _r2 += -_r_d2 *
+                           clad::custom_derivatives::atan_pushforward(
+                               3. * phi / clad::push(_t5, (3. - phi * phi)), 1.)
+                               .pushforward;
                     _d_phi += 3. * _r2 / clad::push(_t5, (3. - phi * phi));
                     double _r3 = _r2 * -(3. * phi /
                                          (clad::push(_t5, (3. - phi * phi)) *
@@ -704,10 +702,12 @@ void calculate_sig_T_pullback(int nuc, double E, Input input,
                         phi = clad::pop(_t6);
                         double _r_d3 = _d_phi;
                         double _r4 = 0.;
-                        clad::custom_derivatives::atan_pullback(
-                            phi * (15. - phi * phi) /
-                                clad::push(_t7, (15. - 6. * phi * phi)),
-                            -_r_d3, &_r4);
+                        _r4 += -_r_d3 *
+                               clad::custom_derivatives::atan_pushforward(
+                                   phi * (15. - phi * phi) /
+                                       clad::push(_t7, (15. - 6. * phi * phi)),
+                                   1.)
+                                   .pushforward;
                         _d_phi += _r4 /
                                   clad::push(_t7, (15. - 6. * phi * phi)) *
                                   (15. - phi * phi);
@@ -908,15 +908,14 @@ void fast_nuclear_W_pullback(RSComplex Z, RSComplex _d_y, RSComplex *_d_Z)
                 clad::push(_t6, std::move(t6)), t6 = {an[n], 0};
                 clad::push(_t7, sum);
                 clad::ValueAndAdjoint<RSComplex &, RSComplex &> _t8 =
-                    operator_equal_forw(clad::back(_t7),
-                                        c_add(sum, c_mul(t6, c_div(top, bot))),
-                                        &_d_sum, {0., 0.});
+                    operator_equal_forw(
+                        clad::back(_t7), c_add(sum, c_mul(t6, c_div(top, bot))),
+                        &_d_sum, {0., 0.});
             }
             _t9 = W;
             clad::ValueAndAdjoint<RSComplex &, RSComplex &> _t10 =
                 operator_equal_forw(_t9,
-                                    c_add(W, c_mul(prefactor, c_mul(Z, sum))),
-                                    &_d_W, {0., 0.});
+                    c_add(W, c_mul(prefactor, c_mul(Z, sum))), &_d_W, {0., 0.});
             goto _label0;
         }
         else
@@ -937,9 +936,9 @@ void fast_nuclear_W_pullback(RSComplex Z, RSComplex _d_y, RSComplex *_d_Z)
     _label0:;
         {
             RSComplex _r31 = {0., 0.};
-            operator_equal_pullback(_t9,
-                                    c_add(W, c_mul(prefactor, c_mul(Z, sum))),
-                                    {0., 0.}, &_d_W, &_r31);
+            operator_equal_pullback(
+                _t9, c_add(W, c_mul(prefactor, c_mul(Z, sum))), {0., 0.}, &_d_W,
+                &_r31);
             RSComplex _r32 = {0., 0.};
             RSComplex _r33 = {0., 0.};
             c_add_pullback(W, c_mul(prefactor, c_mul(Z, sum)), _r31, &_r32,
@@ -960,9 +959,9 @@ void fast_nuclear_W_pullback(RSComplex Z, RSComplex _d_y, RSComplex *_d_Z)
             n--;
             {
                 RSComplex _r24 = {0., 0.};
-                operator_equal_pullback(clad::back(_t7),
-                                        c_add(sum, c_mul(t6, c_div(top, bot))),
-                                        {0., 0.}, &_d_sum, &_r24);
+                operator_equal_pullback(
+                    clad::back(_t7), c_add(sum, c_mul(t6, c_div(top, bot))),
+                    {0., 0.}, &_d_sum, &_r24);
                 RSComplex _r25 = {0., 0.};
                 RSComplex _r26 = {0., 0.};
                 c_add_pullback(sum, c_mul(t6, c_div(top, bot)), _r24, &_r25,
@@ -1132,8 +1131,8 @@ void c_div_pullback(RSComplex A, RSComplex B, RSComplex _d_y, RSComplex *_d_A,
     (*_d_A).i += _d_b;
     (*_d_A).r += _d_a;
 }
-inline constexpr void operator_equal_pullback(RSComplex &this_1,
-                                              RSComplex &&arg, RSComplex _d_y,
+inline constexpr void operator_equal_pullback(RSComplex &this_1, RSComplex &&arg,
+                                              RSComplex _d_y,
                                               RSComplex *_d_this,
                                               RSComplex *_d_arg) noexcept
 {
@@ -1151,7 +1150,7 @@ inline constexpr void operator_equal_pullback(RSComplex &this_1,
     }
 }
 inline constexpr clad::ValueAndAdjoint<RSComplex &, RSComplex &>
-operator_equal_forw(RSComplex &this_1, RSComplex &&arg, RSComplex *_d_this,
+operator_equal_forw(RSComplex &this_1,RSComplex &&arg, RSComplex *_d_this,
                     RSComplex &&_d_arg) noexcept
 {
     double _t0 = this_1.r;
@@ -1440,15 +1439,15 @@ __global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD )
     // Pole *d_poles = new Pole[GSD.length_poles];
     // memcpy(d_poles, GSD.d_poles, sz);
 
-    // auto grad = clad::gradient(calculate_macro_xs, "macro_xs");
+    // auto grad = clad::gradient(calculate_macro_xs, "macro_xs, poles");
     // grad.execute(macro_xs, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs,
-                //  GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows,
-                //  GSD.poles, GSD.max_num_windows, GSD.max_num_poles, d_macro_xs);
-	calculate_macro_xs_grad_0(macro_xs, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs,
-		GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows,
-		GSD.poles, GSD.max_num_windows, GSD.max_num_poles,
-		d_macro_xs);
-	// free(d_poles);
+    //              GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows,
+
+    calculate_macro_xs_grad_0_11(
+        macro_xs, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs,
+        GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows, GSD.poles,
+        GSD.max_num_windows, GSD.max_num_poles, d_macro_xs, GSD.d_poles);
+    // free(d_poles);
 
     // __enzyme_autodiff((void*)calculate_macro_xs,
 	// 			enzyme_dup,   macro_xs, d_macro_xs,
@@ -1508,6 +1507,8 @@ __device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input 
 		{
 			macro_xs[j] += micro_xs[j] * concs[mat * max_num_nucs + i];
 		}
+
+        free(micro_xs);
 		// Debug
 		/*
 		printf("E = %.2lf, mat = %d, macro_xs[0] = %.2lf, macro_xs[1] = %.2lf, macro_xs[2] = %.2lf, macro_xs[3] = %.2lf\n",
