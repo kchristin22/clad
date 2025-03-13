@@ -44,8 +44,8 @@ CFLAGS := -mllvm -max-heap-to-stack-size=1000000
 # -Rpass=attributor -mllvm -debug -mllvm -debug-only=attributor
 
 CC := $(CLANG_PATH)
-CFLAGS :=  -g -Og --cuda-path=$(CUDA_PATH) -L$(CUDA_PATH)/lib64 --cuda-gpu-arch=sm_$(SM_VERSION) \
-          -std=c++17 -Xclang -add-plugin -Xclang clad -Xclang -plugin-arg-clad -Xclang -fgenerate-source-file -Xclang -load -Xclang $(CLAD_PATH) -I../../include
+CFLAGS :=  --cuda-path=$(CUDA_PATH) -L$(CUDA_PATH)/lib64 --cuda-gpu-arch=sm_$(SM_VERSION) \
+          -std=c++17 -Xclang -add-plugin -Xclang clad -Xclang -plugin-arg-clad -Xclang -fgenerate-source-file -Xclang -plugin-arg-clad -Xclang -enable-tbr -Xclang -load -Xclang $(CLAD_PATH) -I../../include
 
 # Linker Flags
 LDFLAGS = "-lcudart_static" "-ldl" "-lrt" -lpthread -lm -lstdc++ 
