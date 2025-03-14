@@ -2652,6 +2652,7 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
       Expr* dummy = getZeroInit(ptrType);
       VDDerivedInit = BuildOp(UO_Deref, dummy);
     }
+    bool isDirectInit = VD->isDirectInit();
 
     bool isDirectInit = VD->isDirectInit();
     // VDDerivedInit now serves two purposes -- as the initial derivative value
@@ -2730,10 +2731,9 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
           derivedE = BuildOp(UnaryOperatorKind::UO_Deref, derivedE);
       }
 
-      if (VD->getInit()) {
-        llvm::SaveAndRestore<bool> saveTrackVarDecl(m_TrackVarDeclConstructor,
-                                                    true);
+      if (VD->getInit() && !isConstructInit) {
         initDiff = Visit(VD->getInit(), derivedE);
+        isDirectInit = VD->isDirectInit();
       }
 
       // If we are differentiating `VarDecl` corresponding to a local variable
