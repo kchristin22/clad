@@ -1,10 +1,10 @@
 #===============================================================================
 # User Options
 #===============================================================================
-CUDA_PATH ?= /usr/local/cuda-11.8
+CUDA_PATH ?= /usr/local/cuda-12.0
 
 CLAD_PATH ?= ../../build/./lib/clad.so
-CLANG_PATH ?= /usr/lib/llvm-17/bin/clang++
+CLANG_PATH ?= /usr/lib/llvm-19/bin/clang++
 
 # ENZYME_PATH ?= /home/wmoses/git/Enzyme/enzyme/build13D/Enzyme/ClangEnzyme-13.so
 # CLANG_PATH ?= /mnt/sabrent/wmoses/llvm13/buildall/bin/clang++
