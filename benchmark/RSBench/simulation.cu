@@ -141,7 +141,7 @@ __global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD )
 	GSD.verification[i] = max_idx+1;
 }
 
-__device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input input, const int * num_nucs, const int * mats, int max_num_nucs, const double * concs, const int * n_windows, const double * pseudo_K0Rs, const Window * windows, const Pole * poles, int max_num_windows, int max_num_poles ) 
+__device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input input, const int * num_nucs, const int * mats, int max_num_nucs, const double * concs, const int * n_windows, const double * pseudo_K0Rs, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles ) 
 {
 	// zero out macro vector
 	// for( int i = 0; i < 4; i++ )
@@ -177,7 +177,7 @@ __device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input 
 }
 
 // No Temperature dependence (i.e., 0K evaluation)
-__forceinline__ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, const Pole * poles, int max_num_windows, int max_num_poles)
+__device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles)
 {
 	// MicroScopic XS's to Calculate
 	double sigT;
@@ -228,7 +228,7 @@ __forceinline__ __device__ void calculate_micro_xs( double * micro_xs, int nuc, 
 // Temperature Dependent Variation of Kernel
 // (This involves using the Complex Faddeeva function to
 // Doppler broaden the poles within the window)
-__forceinline__ __device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, const Pole * poles, int max_num_windows, int max_num_poles )
+__device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles )
 {
 	// MicroScopic XS's to Calculate
 	double sigT;
@@ -318,7 +318,7 @@ __device__ int pick_mat( uint64_t * seed )
 	return 0;
 }
 
-__forceinline__ __device__ void calculate_sig_T( int nuc, double E, Input input, const double * pseudo_K0RS, RSComplex * sigTfactors )
+__device__ void calculate_sig_T( int nuc, double E, Input input, const double * pseudo_K0RS, RSComplex * sigTfactors )
 {
 	double phi;
 
@@ -343,7 +343,7 @@ __forceinline__ __device__ void calculate_sig_T( int nuc, double E, Input input,
 // This function uses a combination of the Abrarov Approximation
 // and the QUICK_W three term asymptotic expansion.
 // Only expected to use Abrarov ~0.5% of the time.
-__forceinline__ __device__ RSComplex fast_nuclear_W( RSComplex Z )
+__device__ RSComplex fast_nuclear_W( RSComplex Z )
 {
 	// Abrarov 
 	if( c_abs(Z) < 6.0 )
@@ -444,7 +444,7 @@ __host__ __device__ uint64_t LCG_random_int(uint64_t * seed)
 	return *seed;
 }	
 
-__forceinline__ __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
+__device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 {
 	const uint64_t m = 9223372036854775808ULL; // 2^63
 	uint64_t a = 2806196910506780709ULL;
@@ -473,7 +473,7 @@ __forceinline__ __device__ uint64_t fast_forward_LCG(uint64_t seed, uint64_t n)
 
 // Complex arithmetic functions
 
-__forceinline__ __device__ RSComplex c_add( RSComplex A, RSComplex B)
+__device__ RSComplex c_add( RSComplex A, RSComplex B)
 {
 	RSComplex C;
 	C.r = A.r + B.r;
@@ -481,7 +481,7 @@ __forceinline__ __device__ RSComplex c_add( RSComplex A, RSComplex B)
 	return C;
 }
 
-__forceinline__ __device__ RSComplex c_sub( RSComplex A, RSComplex B)
+__device__ RSComplex c_sub( RSComplex A, RSComplex B)
 {
 	RSComplex C;
 	C.r = A.r - B.r;
@@ -489,7 +489,7 @@ __forceinline__ __device__ RSComplex c_sub( RSComplex A, RSComplex B)
 	return C;
 }
 
-__forceinline__ __host__ __device__ RSComplex c_mul( RSComplex A, RSComplex B)
+__host__ __device__ RSComplex c_mul( RSComplex A, RSComplex B)
 {
 	double a = A.r;
 	double b = A.i;
@@ -501,7 +501,7 @@ __forceinline__ __host__ __device__ RSComplex c_mul( RSComplex A, RSComplex B)
 	return C;
 }
 
-__forceinline__ __device__ RSComplex c_div( RSComplex A, RSComplex B)
+__device__ RSComplex c_div( RSComplex A, RSComplex B)
 {
 	double a = A.r;
 	double b = A.i;
@@ -514,7 +514,7 @@ __forceinline__ __device__ RSComplex c_div( RSComplex A, RSComplex B)
 	return C;
 }
 
-__forceinline__ __device__ double c_abs( RSComplex A)
+__device__ double c_abs( RSComplex A)
 {
 	return sqrt(A.r*A.r + A.i * A.i);
 }
@@ -526,7 +526,7 @@ __forceinline__ __device__ double c_abs( RSComplex A)
 // We use our own to avoid small differences in compiler specific
 // exp() intrinsic implementations that make it difficult to verify
 // if the code is working correctly or not.
-__forceinline__ __device__ double fast_exp(double x)
+__device__ double fast_exp(double x)
 {
   x = 1.0 + x * 0.000244140625;
   x *= x; x *= x; x *= x; x *= x;
@@ -538,7 +538,7 @@ __forceinline__ __device__ double fast_exp(double x)
 // Implementation based on:
 // z = x + iy
 // cexp(z) = e^x * (cos(y) + i * sin(y))
-__forceinline__ __device__ RSComplex fast_cexp( RSComplex z )
+__device__ RSComplex fast_cexp( RSComplex z )
 {
 	double x = z.r;
 	double y = z.i;
