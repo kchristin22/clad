@@ -40,6 +40,22 @@ typedef struct{
 	double i;
 } RSComplex;
 
+namespace clad{
+	namespace custom_derivatives{
+		namespace class_functions{
+            __host__ __device__ inline void constructor_pullback(RSComplex &other,
+                                                         RSComplex *d_this,
+                                                         RSComplex *d_other)
+            {
+                assert(d_this != nullptr && "d_this is NULL!");
+                assert(d_other != nullptr && "d_other is NULL!");
+                d_other->r += d_this->r;
+                d_other->i += d_this->i;
+            };
+        }
+	}
+}
+
 typedef struct{
 	int nthreads;
 	int n_nuclides;
@@ -61,6 +77,24 @@ typedef struct{
 	RSComplex MP_RF;
 	short int l_value;
 } Pole;
+
+// namespace clad
+// {
+//     namespace custom_derivatives
+//     {
+//         namespace class_functions
+//         {
+//             __device__ void constructor_pullback(Pole &other, Pole *d_this,
+//                                                  Pole *d_other)
+//             {
+// 				constructor_pullback(other.MP_EA, &d_this->MP_EA, &d_other->MP_EA);
+// 				constructor_pullback(other.MP_RT, &d_this->MP_RT, &d_other->MP_RT);
+// 				constructor_pullback(other.MP_RA, &d_this->MP_RA, &d_other->MP_RA);
+// 				d_other->l_value += d_this->l_value;
+//             };
+//         }
+//     }
+// }
 
 typedef struct{
 	double T;
