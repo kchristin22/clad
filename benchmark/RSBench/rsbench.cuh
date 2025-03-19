@@ -9,9 +9,6 @@
 #include<assert.h>
 #include<cuda.h>
 #include <thrust/reduce.h>
-#include <thrust/count.h>
-#include <thrust/execution_policy.h>
-#include <thrust/sort.h>
 #include <chrono> 
 
 #define PI 3.14159265359
@@ -164,9 +161,9 @@ size_t get_mem_estimate( Input input );
 double get_time(void);
 
 // simulation.c
-void run_event_based_simulation(Input input, SimulationData data, unsigned long * vhash_result );
+void run_event_based_simulation(Input input, SimulationData data, SimulationData SD, unsigned long * vhash_result );
 void run_event_based_simulation_optimization_1(Input in, SimulationData GSD, unsigned long * vhash_result);
-__global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD, long long *origTimes, long long *gradTimes );
+__global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD );
 __device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input input, const int * num_nucs, const int * mats, int max_num_nucs, const double * concs, const int * n_windows, const double * pseudo_K0Rs, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles );
 __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles);
 __device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles );
