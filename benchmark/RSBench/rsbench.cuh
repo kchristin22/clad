@@ -78,23 +78,23 @@ typedef struct{
 	short int l_value;
 } Pole;
 
-// namespace clad
-// {
-//     namespace custom_derivatives
-//     {
-//         namespace class_functions
-//         {
-//             __device__ void constructor_pullback(Pole &other, Pole *d_this,
-//                                                  Pole *d_other)
-//             {
-// 				constructor_pullback(other.MP_EA, &d_this->MP_EA, &d_other->MP_EA);
-// 				constructor_pullback(other.MP_RT, &d_this->MP_RT, &d_other->MP_RT);
-// 				constructor_pullback(other.MP_RA, &d_this->MP_RA, &d_other->MP_RA);
-// 				d_other->l_value += d_this->l_value;
-//             };
-//         }
-//     }
-// }
+namespace clad
+{
+    namespace custom_derivatives
+    {
+        namespace class_functions
+        {
+            __device__ void constructor_pullback(Pole &other, Pole *d_this,
+                                                 Pole *d_other)
+            {
+				constructor_pullback(other.MP_EA, &d_this->MP_EA, &d_other->MP_EA);
+				constructor_pullback(other.MP_RT, &d_this->MP_RT, &d_other->MP_RT);
+				constructor_pullback(other.MP_RA, &d_this->MP_RA, &d_other->MP_RA);
+				d_other->l_value += d_this->l_value;
+            };
+        }
+    }
+}
 
 typedef struct{
 	double T;
@@ -166,7 +166,7 @@ double get_time(void);
 // simulation.c
 void run_event_based_simulation(Input input, SimulationData data, unsigned long * vhash_result );
 void run_event_based_simulation_optimization_1(Input in, SimulationData GSD, unsigned long * vhash_result);
-__global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD );
+__global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD, long long *origTimes, long long *gradTimes );
 __device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input input, const int * num_nucs, const int * mats, int max_num_nucs, const double * concs, const int * n_windows, const double * pseudo_K0Rs, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles );
 __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles);
 __device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles );
