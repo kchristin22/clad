@@ -2,7 +2,7 @@
 CUDA_PATH ?= /usr/local/cuda-11.8
 # ENZYME_PATH ?= /home/lpaehler/Work/temporary_files/Enzyme/build/ClangEnzyme-13.so
 CLAD_PATH ?= ../../build/./lib/clad.so
-CLANG_PATH ?= /usr/lib/llvm-17/bin/clang++
+CLANG_PATH ?= /usr/lib/llvm-19/bin/clang++
 SM_VERSION  = 75
 
 # Ablation testing & numerical verification
