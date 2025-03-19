@@ -317,7 +317,7 @@ void cuda_init(int rank)
 
     cudaSafeCall( cudaGetDeviceProperties(&cuda_deviceProp, dev) );
     if (cuda_deviceProp.major < 3) {
-        fprintf(stderr, "cuda_init(): This implementation of Lulesh requires device SM 3.0+.\n", dev);
+        fprintf(stderr, "cuda_init(): This implementation of Lulesh requires device SM 3.0+. Has %d\n", dev);
         exit(1);
     }
 
@@ -928,7 +928,7 @@ Domain *NewDomain(char* argv[], Int_t numRanks, Index_t colLoc,
        fsuccess = fscanf(fp, "%d", &n) ;
        freeSurf_h[i] = Index_t(n) ;
     }
-    printf("%c\n",fsuccess);//nothing
+    printf("%d\n",fsuccess);//nothing
     fclose(fp);
 
     /* set up boundary condition information */
@@ -3961,9 +3961,9 @@ void CalcSoundSpeedForElems_device(Real_t& vnewc,
                                    Real_t ss4o3,
                                    Index_t nz,
                                    #ifdef RESTRICT
-                                   Real_t *__restrict__ ss,
+                                   const Real_t *__restrict__ ss,
                                    #else
-                                   Real_t *ss,
+                                   const Real_t *ss,
                                    #endif
                                    Index_t iz)
 {
@@ -3975,7 +3975,7 @@ void CalcSoundSpeedForElems_device(Real_t& vnewc,
   else {
     ssTmp = SQRT(ssTmp) ;
   }
-  ss[iz] = ssTmp;
+  const_cast<Real_t&>(ss[iz]) = ssTmp;
 }
 
 static
@@ -3985,17 +3985,17 @@ void ApplyMaterialPropertiesForElems_device(
     Real_t& eosvmin,
     Real_t& eosvmax,
     #ifdef RESTRICT
-    Real_t* __restrict__ vnew,
-    Real_t *__restrict__ v,
+    const Real_t* __restrict__ vnew,
+    const Real_t *__restrict__ v,
     #else
-    Real_t*  vnew,
-    Real_t *v,
+    const Real_t*  vnew,
+    const Real_t *v,
     #endif
     Real_t& vnewc,
     #ifdef RESTRICT
-    Index_t* __restrict__ bad_vol,
+    const Index_t* __restrict__ bad_vol,
     #else
-    Index_t* bad_vol,
+    const Index_t* bad_vol,
     #endif
     Index_t zn)
 {
@@ -4022,7 +4022,7 @@ void ApplyMaterialPropertiesForElems_device(
         vc = eosvmax ;
   }
   if (vc <= 0.) {
-     *bad_vol = zn;
+    const_cast<Index_t&>(*bad_vol) = zn;
   }
 
 }
@@ -4032,8 +4032,8 @@ __device__
 __forceinline__
 void UpdateVolumesForElems_device(Index_t numElem,
                                   Real_t& v_cut,
-                                  Real_t *vnew,
-                                  Real_t *v,
+                                  const Real_t *vnew,
+                                  const Real_t *v,
                                   int i)
 {
    Real_t tmpV ;
@@ -4041,7 +4041,7 @@ void UpdateVolumesForElems_device(Index_t numElem,
 
    if ( FABS(tmpV - Real_t(1.0)) < v_cut )
       tmpV = Real_t(1.0) ;
-   v[i] = tmpV ;
+   const_cast<Real_t&>(v[i]) = tmpV ;
 }
 
 
@@ -4223,15 +4223,15 @@ void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel(
         Real_t e_cut,
         Real_t emin,
         #ifdef RESTRICT
-        Real_t* __restrict__ ql,
-        Real_t* __restrict__ qq,
-        Real_t* __restrict__ vnew,
-        Real_t* __restrict__ v,
+        const Real_t* __restrict__ ql,
+        const Real_t* __restrict__ qq,
+        const Real_t* __restrict__ vnew,
+        const Real_t* __restrict__ v,
         #else
-        Real_t* ql,
-        Real_t* qq,
-        Real_t* vnew,
-        Real_t* v,
+        const Real_t* ql,
+        const Real_t* qq,
+        const Real_t* vnew,
+        const Real_t* v,
         #endif
         Real_t pmin,
         Real_t p_cut,
@@ -4239,29 +4239,29 @@ void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel(
         Real_t eosvmin,
         Real_t eosvmax,
         #ifdef RESTRICT
-        Index_t* __restrict__ regElemlist,
+        const Index_t* __restrict__ regElemlist,
         Real_t* __restrict__ e,
-        Real_t* __restrict__ delv,
-        Real_t* __restrict__ p,
-        Real_t* __restrict__ q,
+        const Real_t* __restrict__ delv,
+        const Real_t* __restrict__ p,
+        const Real_t* __restrict__ q,
         #else
-        Index_t* regElemlist,
+        const Index_t* regElemlist,
         Real_t* e,
-        Real_t* delv,
-        Real_t* p,
-        Real_t* q,
+        const Real_t* delv,
+        const Real_t* p,
+        const Real_t* q,
         #endif
         Real_t ss4o3,
         #ifdef RESTRICT
-        Real_t* __restrict__ ss,
+        const Real_t* __restrict__ ss,
         #else
-        Real_t* ss,
+        const Real_t* ss,
         #endif
         Real_t v_cut,
         #ifdef RESTRICT
-        Index_t* __restrict__ bad_vol,
+        const Index_t* __restrict__ bad_vol,
         #else
-        Index_t* bad_vol,
+        const Index_t* bad_vol,
         #endif
         const Int_t cost,
         #ifdef RESTRICT
@@ -4367,9 +4367,9 @@ void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel(
 
  }//end for rep
 
-    p[zidx] = p_new ;
+    const_cast<Real_t&>(p[zidx]) = p_new ;
     e[zidx] = e_new ;
-    q[zidx] = q_new ;
+    const_cast<Real_t&>(q[zidx]) = q_new ;
 
     CalcSoundSpeedForElems_device(
       vnewc,
@@ -5361,7 +5361,7 @@ void VerifyAndWriteFinalOutput(Real_t elapsed_time,
             if (MaxRelDiff <RelDiff)  MaxRelDiff = RelDiff;
          }
       }
-      delete e_all;
+      delete[] e_all;
 
       // Quick symmetry check
       printf("   Testing Plane 0 of Energy Array on rank 0:\n");
