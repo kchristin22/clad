@@ -1,7 +1,7 @@
 #===============================================================================
 # User Options
 #===============================================================================
-CUDA_PATH ?= /usr/local/cuda-12.0
+CUDA_PATH ?= /usr/local/cuda-11.8
 
 CLAD_PATH ?= ../../build/./lib/clad.so
 CLANG_PATH ?= /usr/lib/llvm-19/bin/clang++
@@ -16,7 +16,7 @@ INLINE      ?= no
 
 DEBUG       = no
 PROFILE     = no
-SM_VERSION  = 60
+SM_VERSION  = 75
 
 #===============================================================================
 # Program name & source code list
