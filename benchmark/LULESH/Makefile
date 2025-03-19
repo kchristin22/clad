@@ -3,7 +3,7 @@ CUDA_PATH ?= /usr/local/cuda-11.8
 # ENZYME_PATH ?= /home/lpaehler/Work/temporary_files/Enzyme/build/ClangEnzyme-13.so
 CLAD_PATH ?= ../../build/./lib/clad.so
 CLANG_PATH ?= /usr/lib/llvm-17/bin/clang++
-SM_VERSION  = 60
+SM_VERSION  = 75
 
 # Ablation testing & numerical verification
 VERIFY  ?= no
@@ -17,7 +17,7 @@ DEBUG ?= no
 
 CC := $(CLANG_PATH) 
 CFLAGS  = -std=c++17 --cuda-path=$(CUDA_PATH) -L$(CUDA_PATH)/lib64 --cuda-gpu-arch=sm_$(SM_VERSION) \
-		  -Xclang -add-plugin -Xclang clad -Xclang -plugin-arg-clad -Xclang -fgenerate-source-file -Xclang -load -Xclang $(CLAD_PATH) -I../../include
+		  -Xclang -add-plugin -Xclang clad -Xclang -plugin-arg-clad -Xclang -enable-tbr -Xclang -plugin-arg-clad -Xclang -fgenerate-source-file -Xclang -load -Xclang $(CLAD_PATH) -I../../include
 LDFLAGS = -lcudart_static -ldl -lrt -lpthread -lm -lstdc++ 
 
 
