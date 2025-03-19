@@ -13,15 +13,18 @@
 // line argument.
 ////////////////////////////////////////////////////////////////////////////////////
 
-void run_event_based_simulation(Input input, SimulationData GSD, unsigned long * vhash_result )
+
+void run_event_based_simulation(Input input, SimulationData GSD, SimulationData SD, unsigned long * vhash_result )
 {
 	////////////////////////////////////////////////////////////////////////////////
 	// Configure & Launch Simulation Kernel
 	////////////////////////////////////////////////////////////////////////////////
 	printf("Running baseline event-based simulation on device...\n");
 
-	int nthreads = 256;
-	int nblocks = ceil( (double) input.lookups / (double) nthreads);
+	int nthreads = 32;
+	int nblocks = ceil( (double) input.lookups / 32.0);
+
+	gpuErrchk( cudaDeviceSynchronize() );
 
 	xs_lookup_kernel_baseline<<<nblocks, nthreads>>>( input, GSD );
 	gpuErrchk( cudaPeekAtLastError() );
@@ -33,6 +36,7 @@ void run_event_based_simulation(Input input, SimulationData GSD, unsigned long *
 	printf("Reducing verification results...\n");
 
 	unsigned long verification_scalar = thrust::reduce(thrust::device, GSD.verification, GSD.verification + input.lookups, 0);
+
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 
@@ -84,11 +88,11 @@ __global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD )
 	double macro_xs[4] = {0};
 
 	#ifdef FORWARD
-	calculate_macro_xs( macro_xs, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs, GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows, GSD.poles, GSD.max_num_windows, GSD.max_num_poles );
+	calculate_macro_xs( macro_xs, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs, GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows,   GSD.poles, GSD.max_num_windows, GSD.max_num_poles );
 
 	#ifdef VERIFY
 	double macro_xs2[4] = {0};
-	calculate_macro_xs( macro_xs, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs, GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows, GSD.poles, GSD.max_num_windows, GSD.max_num_poles );
+	calculate_macro_xs( macro_xs2, mat, E, in, GSD.num_nucs, GSD.mats, GSD.max_num_nucs, GSD.concs, GSD.n_windows, GSD.pseudo_K0RS, GSD.windows, GSD.d_poles, GSD.max_num_windows, GSD.max_num_poles );
 	printf("zz=%f %f %f %f\n", macro_xs2[0], macro_xs[0], GSD.poles[0].MP_EA.r , GSD.d_poles[0].MP_EA.r  );
 	atomicAdd(GSD.dout, (macro_xs2[0] - macro_xs[0]) / 1e-3 );
 	#endif
@@ -104,23 +108,7 @@ __global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD )
                  GSD.poles, GSD.max_num_windows, GSD.max_num_poles, d_macro_xs,
                  GSD.d_poles);
 
-    // __enzyme_autodiff((void*)calculate_macro_xs,
-	// 			enzyme_dup,   macro_xs, d_macro_xs,
-	// 			enzyme_const, mat,
-	// 			enzyme_const, E, 
-	// 			enzyme_const, in, 
-	// 			enzyme_const, GSD.num_nucs, 
-	// 			enzyme_const, GSD.mats, 
-	// 			enzyme_const, GSD.max_num_nucs, 
-	// 			enzyme_const, GSD.concs, 
-	// 			enzyme_const, GSD.n_windows, 
-	// 			enzyme_const, GSD.pseudo_K0RS, 
-	// 			enzyme_const, GSD.windows, 
-	// 			//enzyme_const,   GSD.poles,
-	// 			enzyme_dup,   GSD.poles, GSD.d_poles,
-	// 			enzyme_const, GSD.max_num_windows, 
-	// 			enzyme_const, GSD.max_num_poles
-	// 		);
+
     #endif
 
 	// For verification, and to prevent the compiler from optimizing
@@ -141,14 +129,16 @@ __global__ void xs_lookup_kernel_baseline(Input in, SimulationData GSD )
 	GSD.verification[i] = max_idx+1;
 }
 
-__device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input input, const int * num_nucs, const int * mats, int max_num_nucs, const double * concs, const int * n_windows, const double * pseudo_K0Rs, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles ) 
+__device__ void calculate_macro_xs( double * __restrict__ macro_xs, int mat, double E, Input input, const int * __restrict__ num_nucs, const int * __restrict__ mats, int max_num_nucs, const double * __restrict__ concs, const int * __restrict__ n_windows, const double * __restrict__ pseudo_K0Rs, const Window * __restrict__ windows, Pole * __restrict__ poles, int max_num_windows, int max_num_poles ) 
 {
 	// zero out macro vector
 	// for( int i = 0; i < 4; i++ )
 	// 	macro_xs[i] = 0;
 
 	// for nuclide in mat
-	for( int i = 0; i < num_nucs[mat]; i++ )
+	int sz = num_nucs[mat];
+	for( int i = 0; i < sz; i++ )
+	// for( int i = 0; i < num_nucs[mat]; i++ )
 	{
 		double micro_xs[4];
 		int nuc = mats[mat * max_num_nucs + i];
@@ -177,6 +167,9 @@ __device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input 
 }
 
 // No Temperature dependence (i.e., 0K evaluation)
+#ifdef ALWAYS_INLINE
+__attribute__((always_inline))
+#endif
 __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles)
 {
 	// MicroScopic XS's to Calculate
@@ -228,6 +221,9 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 // Temperature Dependent Variation of Kernel
 // (This involves using the Complex Faddeeva function to
 // Doppler broaden the poles within the window)
+#ifdef ALWAYS_INLINE
+__attribute__((always_inline))
+#endif
 __device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles )
 {
 	// MicroScopic XS's to Calculate
@@ -322,6 +318,7 @@ __device__ void calculate_sig_T( int nuc, double E, Input input, const double * 
 {
 	double phi;
 
+	// #pragma unroll
 	for( int i = 0; i < 4; i++ )
 	{
 		phi = pseudo_K0RS[nuc * input.numL + i] * sqrt(E);
@@ -343,6 +340,7 @@ __device__ void calculate_sig_T( int nuc, double E, Input input, const double * 
 // This function uses a combination of the Abrarov Approximation
 // and the QUICK_W three term asymptotic expansion.
 // Only expected to use Abrarov ~0.5% of the time.
+__attribute__((always_inline))
 __device__ RSComplex fast_nuclear_W( RSComplex Z )
 {
 	// Abrarov 
@@ -395,6 +393,7 @@ __device__ RSComplex fast_nuclear_W( RSComplex Z )
 		RSComplex one = {1, 0};
 		RSComplex W = c_div(c_mul(i, ( c_sub(one, fast_cexp(c_mul(t1, Z))) )) , c_mul(t2, Z));
 		RSComplex sum = {0,0};
+		// #pragma unroll
 		for( int n = 0; n < 10; n++ )
 		{
 			RSComplex t3 = {neg_1n[n], 0};
