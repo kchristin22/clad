@@ -137,7 +137,7 @@ CUDA_HOST_DEVICE T push(tape<T>& to, ArgsT... val) {
     zero_init(p.second);
   }
 
-  template <class T> void zero_init(T& t) { zero_impl(t); }
+  template <class T> CUDA_HOST_DEVICE void zero_init(T &t) { zero_impl(t); }
 
   /// Initialize a const sized array.
   // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)

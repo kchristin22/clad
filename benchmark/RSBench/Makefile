@@ -9,10 +9,11 @@ CLANG_PATH ?= /usr/lib/llvm-19/bin/clang++
 # ENZYME_PATH ?= /home/wmoses/git/Enzyme/enzyme/build13D/Enzyme/ClangEnzyme-13.so
 # CLANG_PATH ?= /mnt/sabrent/wmoses/llvm13/buildall/bin/clang++
 
-OPTIMIZE    ?= no
+OPTIMIZE    ?= yes
+VERIFY      ?= no
 
 FORWARD     ?= no
-INLINE      ?= no
+INLINE      ?= yes
 
 DEBUG       = no
 PROFILE     = no
@@ -74,6 +75,10 @@ endif
 
 ifeq ($(INLINE),yes)
   CFLAGS += -DALWAYS_INLINE=1
+endif
+
+ifeq ($(VERIFY),yes)
+	CFLAGS += -DVERIFY
 endif
 
 #===============================================================================
