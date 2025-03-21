@@ -194,7 +194,7 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 	sigA = E * w.A;
 	sigF = E * w.F;
 
-	// Loop over Poles within window, add contributions
+    // Loop over Poles within window, add contributions
 	for( int i = w.start; i < w.end; i++ )
 	{
 		RSComplex PSIIKI = {0., 0.};
@@ -205,10 +205,14 @@ __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input 
 		PSIIKI = c_div( t1 , c_sub(pole.MP_EA,t2) );
 		RSComplex E_c = {E, 0};
 		CDUM = c_div(PSIIKI, E_c);
-		sigT += (c_mul(pole.MP_RT, c_mul(CDUM, sigTfactors[pole.l_value])) ).r;
-		sigA += (c_mul( pole.MP_RA, CDUM)).r;
-		sigF += (c_mul(pole.MP_RF, CDUM)).r;
-	}
+        RSComplex _t1 =
+            c_mul(pole.MP_RT, c_mul(CDUM, sigTfactors[pole.l_value]));
+        sigT += _t1.r;
+        RSComplex _t2 = c_mul(pole.MP_RA, CDUM);
+        sigA += _t2.r;
+        RSComplex _t3 = c_mul(pole.MP_RF, CDUM);
+        sigF += _t3.r;
+    }
 
 	sigE = sigT - sigA;
 
