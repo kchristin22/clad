@@ -32,6 +32,8 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 	}
 }
 
+#define non_differentiable __attribute__((annotate("non_differentiable")))
+
 typedef struct{
 	double r;
 	double i;
@@ -65,7 +67,7 @@ typedef struct{
 	int particles;
 	int simulation_method;
 	int kernel_id;
-} Input;
+} non_differentiable Input;
 
 typedef struct{
 	RSComplex MP_EA;
@@ -99,7 +101,7 @@ typedef struct{
 	double F;
 	int start;
 	int end;
-} Window;
+} non_differentiable Window;
 
 typedef struct{
 	int * n_poles;

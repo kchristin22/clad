@@ -1301,9 +1301,9 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
       // Sema::BuildDeclRefExpr is responsible for adding captured fields
       // to the underlying struct of a lambda.
       if (VD->getDeclContext() != m_Sema.CurContext) {
-        auto* ccDRE = dyn_cast<DeclRefExpr>(clonedDRE);
         NestedNameSpecifier* NNS = DRE->getQualifier();
-        auto* referencedDecl = cast<VarDecl>(ccDRE->getDecl());
+        auto* referencedDecl = BuildVarDecl(VD->getType(), VD->getIdentifier(),
+                                            VD->getInit(), VD->isDirectInit());
         clonedDRE = BuildDeclRef(referencedDecl, NNS, DRE->getValueKind());
       }
       // This case happens when ref-type variables have to become function
@@ -1586,78 +1586,85 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
         // is done to reduce cloning complexity and only clone once. The type is
         // same as the call expression as it is the type used to declare the
         // _gradX array
-        QualType dArgTy = utils::getNonConstType(arg->getType(), m_Sema);
-        VarDecl* dArgDecl = BuildVarDecl(dArgTy, "_r", getZeroInit(dArgTy));
-        PreCallStmts.push_back(BuildDeclStmt(dArgDecl));
-        DeclRefExpr* dArgRef = BuildDeclRef(dArgDecl);
-        if (isa<CUDAKernelCallExpr>(CE)) {
-          // Create variables to be allocated and initialized on the device, and
-          // then be passed to the kernel pullback.
-          //
-          // These need to be pointers because cudaMalloc expects a
-          // pointer-to-pointer as an arg.
-          // The memory addresses they point to are initialized to zero through
-          // cudaMemset.
-          // After the pullback call, their values will be copied back to the
-          // corresponding _r variables on the host and the device variables
-          // will be freed.
-          //
-          // Example of the generated code:
-          //
-          // double _r0 = 0;
-          // double* _r1 = nullptr;
-          // cudaMalloc(&_r1, sizeof(double));
-          // cudaMemset(_r1, 0, 8);
-          // kernel_pullback<<<...>>>(..., _r1);
-          // cudaMemcpy(&_r0, _r1, 8, cudaMemcpyDeviceToHost);
-          // cudaFree(_r1);
+        if (!utils::hasNonDifferentiableAttribute(arg)) {
+          QualType dArgTy = getNonConstType(arg->getType(), m_Context, m_Sema);
+          VarDecl* dArgDecl = BuildVarDecl(dArgTy, "_r", getZeroInit(dArgTy));
+          PreCallStmts.push_back(BuildDeclStmt(dArgDecl));
+          DeclRefExpr* dArgRef = BuildDeclRef(dArgDecl);
+          if (isa<CUDAKernelCallExpr>(CE)) {
+            // Create variables to be allocated and initialized on the device,
+            // and then be passed to the kernel pullback.
+            //
+            // These need to be pointers because cudaMalloc expects a
+            // pointer-to-pointer as an arg.
+            // The memory addresses they point to are initialized to zero
+            // through cudaMemset. After the pullback call, their values will be
+            // copied back to the corresponding _r variables on the host and the
+            // device variables will be freed.
+            //
+            // Example of the generated code:
+            //
+            // double _r0 = 0;
+            // double* _r1 = nullptr;
+            // cudaMalloc(&_r1, sizeof(double));
+            // cudaMemset(_r1, 0, 8);
+            // kernel_pullback<<<...>>>(..., _r1);
+            // cudaMemcpy(&_r0, _r1, 8, cudaMemcpyDeviceToHost);
+            // cudaFree(_r1);
 
-          // Create a literal for the size of the type
-          Expr* sizeLiteral = ConstantFolder::synthesizeLiteral(
-              m_Context.IntTy, m_Context, m_Context.getTypeSize(dArgTy) / 8);
-          dArgTy = m_Context.getPointerType(dArgTy);
-          VarDecl* dArgDeclCUDA =
-              BuildVarDecl(dArgTy, "_r", getZeroInit(dArgTy));
+            // Create a literal for the size of the type
+            Expr* sizeLiteral = ConstantFolder::synthesizeLiteral(
+                m_Context.IntTy, m_Context, m_Context.getTypeSize(dArgTy) / 8);
+            dArgTy = m_Context.getPointerType(dArgTy);
+            VarDecl* dArgDeclCUDA =
+                BuildVarDecl(dArgTy, "_r", getZeroInit(dArgTy));
 
-          // Create the cudaMemcpyDeviceToHost argument
-          LookupResult deviceToHostResult =
-              utils::LookupQualifiedName("cudaMemcpyDeviceToHost", m_Sema);
-          if (deviceToHostResult.empty()) {
-            diag(DiagnosticsEngine::Error, CE->getEndLoc(),
-                 "Failed to create cudaMemcpy call; cudaMemcpyDeviceToHost not "
-                 "found. Creating kernel pullback aborted.");
-            return StmtDiff(Clone(CE));
+            // Create the cudaMemcpyDeviceToHost argument
+            LookupResult deviceToHostResult =
+                utils::LookupQualifiedName("cudaMemcpyDeviceToHost", m_Sema);
+            if (deviceToHostResult.empty()) {
+              diag(DiagnosticsEngine::Error, CE->getEndLoc(),
+                   "Failed to create cudaMemcpy call; cudaMemcpyDeviceToHost "
+                   "not "
+                   "found. Creating kernel pullback aborted.");
+              return StmtDiff(Clone(CE));
+            }
+            CXXScopeSpec SS;
+            Expr* deviceToHostExpr =
+                m_Sema
+                    .BuildDeclarationNameExpr(SS, deviceToHostResult,
+                                              /*ADL=*/false)
+                    .get();
+
+            // Add calls to cudaMalloc, cudaMemset, cudaMemcpy, and cudaFree
+            PreCallStmts.push_back(BuildDeclStmt(dArgDeclCUDA));
+            Expr* refOp = BuildOp(UO_AddrOf, BuildDeclRef(dArgDeclCUDA));
+            llvm::SmallVector<Expr*, 3> mallocArgs = {refOp, sizeLiteral};
+            PreCallStmts.push_back(
+                GetFunctionCall("cudaMalloc", "", mallocArgs));
+            llvm::SmallVector<Expr*, 3> memsetArgs = {
+                BuildDeclRef(dArgDeclCUDA), getZeroInit(m_Context.IntTy),
+                sizeLiteral};
+            PreCallStmts.push_back(
+                GetFunctionCall("cudaMemset", "", memsetArgs));
+            llvm::SmallVector<Expr*, 4> cudaMemcpyArgs = {
+                BuildOp(UO_AddrOf, dArgRef), BuildDeclRef(dArgDeclCUDA),
+                sizeLiteral, deviceToHostExpr};
+            PostCallStmts.push_back(
+                GetFunctionCall("cudaMemcpy", "", cudaMemcpyArgs));
+            llvm::SmallVector<Expr*, 3> freeArgs = {BuildDeclRef(dArgDeclCUDA)};
+            PostCallStmts.push_back(GetFunctionCall("cudaFree", "", freeArgs));
+
+            // Update arg to be passed to pullback call
+            dArgRef = BuildDeclRef(dArgDeclCUDA);
           }
-          CXXScopeSpec SS;
-          Expr* deviceToHostExpr =
-              m_Sema
-                  .BuildDeclarationNameExpr(SS, deviceToHostResult,
-                                            /*ADL=*/false)
-                  .get();
-
-          // Add calls to cudaMalloc, cudaMemset, cudaMemcpy, and cudaFree
-          PreCallStmts.push_back(BuildDeclStmt(dArgDeclCUDA));
-          Expr* refOp = BuildOp(UO_AddrOf, BuildDeclRef(dArgDeclCUDA));
-          llvm::SmallVector<Expr*, 3> mallocArgs = {refOp, sizeLiteral};
-          PreCallStmts.push_back(GetFunctionCall("cudaMalloc", "", mallocArgs));
-          llvm::SmallVector<Expr*, 3> memsetArgs = {
-              BuildDeclRef(dArgDeclCUDA), getZeroInit(m_Context.IntTy),
-              sizeLiteral};
-          PreCallStmts.push_back(GetFunctionCall("cudaMemset", "", memsetArgs));
-          llvm::SmallVector<Expr*, 4> cudaMemcpyArgs = {
-              BuildOp(UO_AddrOf, dArgRef), BuildDeclRef(dArgDeclCUDA),
-              sizeLiteral, deviceToHostExpr};
-          PostCallStmts.push_back(
-              GetFunctionCall("cudaMemcpy", "", cudaMemcpyArgs));
-          llvm::SmallVector<Expr*, 3> freeArgs = {BuildDeclRef(dArgDeclCUDA)};
-          PostCallStmts.push_back(GetFunctionCall("cudaFree", "", freeArgs));
-
-          // Update arg to be passed to pullback call
-          dArgRef = BuildDeclRef(dArgDeclCUDA);
+          CallArgDx.push_back(dArgRef);
+          // Visit using uninitialized reference.
+          argDiff = Visit(arg, BuildDeclRef(dArgDecl));
+        } else {
+          CallArgDx.push_back(nullptr);
+          argDiff = Visit(arg);
         }
-        CallArgDx.push_back(dArgRef);
-        // Visit using uninitialized reference.
-        argDiff = Visit(arg, BuildDeclRef(dArgDecl));
       }
 
       // Save cloned arg in a "global" variable, so that it is accessible from
@@ -2695,7 +2702,8 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
       // we should not create a derived variable for it. This will be useful
       // for reducing number of differentiation variables in pullbacks.
       bool constPointer = VDType->getPointeeType().isConstQualified();
-      if (constPointer && !isInitializedByNewExpr && !initDiff.getExpr_dx())
+      if (constPointer && !isInitializedByNewExpr && !initDiff.getExpr_dx() &&
+          utils::hasNonDifferentiableAttribute(VD->getCanonicalDecl()))
         initializeDerivedVar = false;
       else {
         VDDerivedType = utils::getNonConstType(VDDerivedType, m_Sema);
@@ -2728,9 +2736,10 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
           derivedE = BuildOp(UnaryOperatorKind::UO_Deref, derivedE);
       }
 
-      if (VD->getInit() && !isConstructInit) {
+      if (VD->getInit()) {
+        llvm::SaveAndRestore<bool> saveTrackVarDecl(m_TrackVarDeclConstructor,
+                                                    true);
         initDiff = Visit(VD->getInit(), derivedE);
-        isDirectInit = VD->isDirectInit();
       }
 
       // If we are differentiating `VarDecl` corresponding to a local variable
@@ -4130,9 +4139,6 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
         adjointArg = BuildDeclRef(dArgDecl);
         argDiff = Visit(arg, BuildDeclRef(dArgDecl));
       }
-      primalArgs.push_back(argDiff.getExpr());
-      if (!adjointArg)
-        continue;
       if (utils::isArrayOrPointerType(ArgTy)) {
         reverseForwAdjointArgs.push_back(adjointArg);
         adjointArgs.push_back(adjointArg);
@@ -4470,31 +4476,38 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
       }
 
       const ParmVarDecl* PVD = params[i];
-      if (!IsSelected) {
-        m_NonIndepParams.push_back(PVD);
-        continue;
-      }
-      IdentifierInfo* II =
-          CreateUniqueIdentifier("_d_" + PVD->getNameAsString());
-      QualType dPVDTy = FnType->getParamType(p++);
-      auto* dPVD = utils::BuildParmVarDecl(m_Sema, m_Derivative, II, dPVDTy,
-                                           PVD->getStorageClass());
-      m_Sema.PushOnScopeChains(dPVD, getCurrentScope(), /*AddToContext=*/false);
-      // Ensure that parameters passed by value are always dereferenced on use.
-      // For example d_x in f(float x, float *d_x) should be used as (*d_x) to
-      // matching the type of the input x from the original function.
-      if (utils::isArrayOrPointerType(oPVD->getType())) {
-        m_Variables[PVD] = BuildDeclRef(dPVD);
+      QualType QT = oPVD->getType();
+      if (QT->isPointerType())
+        QT = QT->getPointeeType();
+      auto* typeDecl = QT->getAsCXXRecordDecl();
+      if (!typeDecl || !utils::hasNonDifferentiableAttribute(typeDecl)) {
+        if (!IsSelected) {
+          m_NonIndepParams.push_back(PVD);
+          continue;
+        }
+        IdentifierInfo* II =
+            CreateUniqueIdentifier("_d_" + PVD->getNameAsString());
+        QualType dPVDTy = FnType->getParamType(p++);
+        auto* dPVD = utils::BuildParmVarDecl(m_Sema, m_Derivative, II, dPVDTy,
+                                             PVD->getStorageClass());
+        m_Sema.PushOnScopeChains(dPVD, getCurrentScope(),
+                                 /*AddToContext=*/false);
+        // Ensure that parameters passed by value are always dereferenced on
+        // use. For example d_x in f(float x, float *d_x) should be used as
+        // (*d_x) to matching the type of the input x from the original
+        // function.
+        if (utils::isArrayOrPointerType(oPVD->getType())) {
+          m_Variables[PVD] = BuildDeclRef(dPVD);
+        } else {
+          Expr* Deref =
+              BuildOp(UO_Deref, BuildDeclRef(dPVD), oPVD->getLocation());
+          if (dPVDTy->getPointeeType()->isRecordType())
+            Deref = utils::BuildParenExpr(m_Sema, Deref);
+          m_Variables[PVD] = Deref;
+        }
 
-      } else {
-        Expr* Deref =
-            BuildOp(UO_Deref, BuildDeclRef(dPVD), oPVD->getLocation());
-        if (dPVDTy->getPointeeType()->isRecordType())
-          Deref = utils::BuildParenExpr(m_Sema, Deref);
-        m_Variables[PVD] = Deref;
+        params.push_back(dPVD);
       }
-
-      params.push_back(dPVD);
     }
   }
 
