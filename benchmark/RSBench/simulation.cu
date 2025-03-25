@@ -268,9 +268,14 @@ __device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E
 		RSComplex faddeeva = fast_nuclear_W( Z );
 
 		// Update W
-		sigT += (c_mul( pole.MP_RT, c_mul(faddeeva, sigTfactors[pole.l_value]) )).r;
-		sigA += (c_mul( pole.MP_RA , faddeeva)).r;
-		sigF += (c_mul( pole.MP_RF , faddeeva)).r;
+        RSComplex _t1 =
+            c_mul(pole.MP_RT, c_mul(faddeeva, sigTfactors[pole.l_value]));
+        sigT +=
+            _t1.r;
+		RSComplex _t2 = c_mul(pole.MP_RA, faddeeva);
+        sigA += _t2.r;
+		RSComplex _t3 = c_mul(pole.MP_RF, faddeeva);
+		sigF += _t3.r;
 	}
 
 	sigE = sigT - sigA;
