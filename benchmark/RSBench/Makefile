@@ -92,7 +92,7 @@ $(program): $(obj) rsbench.cuh Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf rsbench $(obj)
+	rm -rf rsbench $(obj) Derivatives.cpp
 
 edit:
 	vim -p $(source) rsbench.cuh
