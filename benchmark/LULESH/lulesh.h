@@ -117,10 +117,6 @@ public:
   Vector_d<Real_t> fy ;
   Vector_d<Real_t> fz ;
 
-  Vector_d<Real_t> dfx ;         /* AD of the forces */
-  Vector_d<Real_t> dfy ;
-  Vector_d<Real_t> dfz ;
-
   Vector_d<Real_t> nodalMass ;    /* mass */
   Vector_h<Real_t> h_nodalMass ;    /* mass - host */
 
@@ -181,9 +177,7 @@ public:
   Int_t cycle ;                  /* iteration count for simulation */
 
   Real_t* dthydro_h;             /* hydro time constraint */ 
-  Real_t* d_dthydro_h;           /* AD change of the hydro time constraint */
   Real_t* dtcourant_h;           /* courant time constraint */
-  Real_t* d_dtcourant_h;         /* AD of the courant time constraint */
   Index_t* bad_q_h;              /* flag to indicate Q error */
   Index_t* bad_vol_h;            /* flag to indicate volume error */
 
