@@ -1089,11 +1089,18 @@ namespace clad {
           // Try to match it against the global arguments
           Expr* ArgE = E->getArg(i)->IgnoreParens()->IgnoreParenCasts();
           if (const auto* DRE = dyn_cast<DeclRefExpr>(ArgE)) {
-            const ParmVarDecl* PVD =
-                static_cast<const ParmVarDecl*>(DRE->getDecl());
-            request.DVI.push_back(PVD);
-            if (m_TopMostReq->HasIndependentParameter(PVD))
+            auto* VD = DRE->getDecl();
+            // if (const auto PVD = dyn_cast<const ParmVarDecl>(DRE->getDecl()))
+            if (isa<ParmVarDecl>(VD)) {
+              const auto* PVD = cast<ParmVarDecl>(VD);
+              request.DVI.push_back(PVD);
               request.CUDAGlobalArgsIndexes.push_back(i);
+            } else {
+              const ParmVarDecl* PVD =
+                  utils::BuildParmVarDecl(m_Sema, m_Sema.CurContext,
+                                          VD->getIdentifier(), VD->getType());
+              request.DVI.push_back(PVD);
+            }
           }
         }
       }
