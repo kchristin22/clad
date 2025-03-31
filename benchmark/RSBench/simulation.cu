@@ -1342,7 +1342,7 @@ __attribute__((device)) void c_div_pullback(RSComplex A, RSComplex B,
     (*_d_A).i += _d_b;
     (*_d_A).r += _d_a;
 }
-inline constexpr void operator_equal_pullback(RSComplex &this_1,
+__device__ inline constexpr void operator_equal_pullback(RSComplex &this_1,
                                               RSComplex &&arg, RSComplex _d_y,
                                               RSComplex *_d_this,
                                               RSComplex *_d_arg) noexcept
@@ -1360,7 +1360,7 @@ inline constexpr void operator_equal_pullback(RSComplex &this_1,
         (*_d_arg).r += _r_d0;
     }
 }
-inline constexpr clad::ValueAndAdjoint<RSComplex &, RSComplex &>
+__device__ inline constexpr clad::ValueAndAdjoint<RSComplex &, RSComplex &>
 operator_equal_forw(RSComplex &this_1, RSComplex &&arg, RSComplex *_d_this,
                     RSComplex &&_d_arg) noexcept
 {
