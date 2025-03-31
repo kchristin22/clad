@@ -1140,8 +1140,6 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
     if (m_DiffReq->getReturnType()->isVoidType())
       return {nullptr, nullptr};
     const Expr* value = RS->getRetValue();
-    if (!value)
-        return {nullptr, nullptr};
     QualType type = value->getType();
     auto* dfdf = m_Pullback;
     if (dfdf && (isa<FloatingLiteral>(dfdf) || isa<IntegerLiteral>(dfdf)) &&
@@ -2656,7 +2654,6 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
       Expr* dummy = getZeroInit(ptrType);
       VDDerivedInit = BuildOp(UO_Deref, dummy);
     }
-    bool isDirectInit = VD->isDirectInit();
 
     bool isDirectInit = VD->isDirectInit();
     // VDDerivedInit now serves two purposes -- as the initial derivative value
