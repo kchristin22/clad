@@ -3662,8 +3662,8 @@ static
 __device__ __forceinline__
 void CalcPressureForElems_device(
                       Real_t& p_new, Real_t& bvc,
-                      Real_t& pbvc, Real_t& e_old,
-                      Real_t& compression, Real_t& vnewc,
+                      Real_t& pbvc, Real_t e_old,
+                      Real_t compression, Real_t vnewc,
                       Real_t pmin,
                       Real_t p_cut, Real_t eosvmax)
 {
@@ -3691,9 +3691,9 @@ void CalcPressureForElems_device(
 
 static
 __device__ __forceinline__
-void CalcSoundSpeedForElems_device(Real_t& vnewc, Real_t rho0, Real_t &enewc,
-                            Real_t &pnewc, Real_t &pbvc,
-                            Real_t &bvc, Real_t ss4o3, Index_t nz,
+void CalcSoundSpeedForElems_device(Real_t vnewc, Real_t rho0, Real_t enewc,
+                            Real_t pnewc, Real_t pbvc,
+                            Real_t bvc, Real_t ss4o3, Index_t nz,
                             const Real_t *ss, Index_t iz)
 {
   Real_t ssTmp = (pbvc * enewc + vnewc * vnewc *
@@ -3711,7 +3711,7 @@ static
 __device__
 __forceinline__ 
 void ApplyMaterialPropertiesForElems_device(
-    Real_t& eosvmin, Real_t& eosvmax,
+    Real_t eosvmin, Real_t eosvmax,
     const Real_t* vnew, const Real_t *v,
     Real_t& vnewc, const Index_t* bad_vol, Index_t zn)
 {
@@ -3746,7 +3746,7 @@ void ApplyMaterialPropertiesForElems_device(
 static
 __device__
 __forceinline__
-void UpdateVolumesForElems_device(Index_t numElem, Real_t& v_cut,
+void UpdateVolumesForElems_device(Index_t numElem, Real_t v_cut,
                                   const Real_t *vnew,
                                   const Real_t *v,
                                   int i)
@@ -3765,13 +3765,13 @@ __device__
 __forceinline__
 void CalcEnergyForElems_device(Real_t& p_new, Real_t& e_new, Real_t& q_new,
                             Real_t& bvc, Real_t& pbvc,
-                            Real_t& p_old, Real_t& e_old, Real_t& q_old,
-                            Real_t& compression, Real_t& compHalfStep,
-                            Real_t& vnewc, Real_t& work, Real_t& delvc, Real_t pmin,
+                            Real_t p_old, Real_t e_old, Real_t q_old,
+                            Real_t compression, Real_t compHalfStep,
+                            Real_t vnewc, Real_t work, Real_t delvc, Real_t pmin,
                             Real_t p_cut, Real_t e_cut, Real_t q_cut, Real_t emin,
-                            Real_t& qq, Real_t& ql,
-                            Real_t& rho0,
-                            Real_t& eosvmax,
+                            Real_t qq, Real_t ql,
+                            Real_t rho0,
+                            Real_t eosvmax,
                             Index_t length)
 {
    const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
