@@ -312,3 +312,6 @@ void CommSendGpu(Domain& domain, Int_t msgType,
 void CommSBNGpu(Domain& domain, Int_t xferFields, Domain_member *fieldData, cudaStream_t *streams);
 void CommSyncPosVelGpu(Domain& domain, cudaStream_t *streams);
 void CommMonoQGpu(Domain& domain, cudaStream_t stream);
+
+
+__global__ void ApplyMaterialPropertiesAndUpdateVolume_kernel_grad_14(Index_t length, Real_t rho0, Real_t e_cut, Real_t emin, const Real_t *__restrict ql, const Real_t *__restrict qq, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t pmin, Real_t p_cut, Real_t q_cut, Real_t eosvmin, Real_t eosvmax, const Index_t *__restrict regElemlist, Real_t *__restrict e, const Real_t *__restrict delv, const Real_t *__restrict p, const Real_t *__restrict q, Real_t ss4o3, const Real_t *__restrict ss, Real_t v_cut, const Index_t *__restrict bad_vol, const Int_t cost, const Index_t *regCSR, const Index_t *regReps, const Index_t numReg, Real_t *_d_e);
