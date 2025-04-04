@@ -3920,9 +3920,9 @@ __forceinline__
 void CalcPressureForElems_device(Real_t& p_new,
                                  Real_t& bvc,
                                  Real_t& pbvc,
-                                 Real_t& e_old,
-                                 Real_t& compression,
-                                 Real_t& vnewc,
+                                 Real_t e_old,
+                                 Real_t compression,
+                                 Real_t vnewc,
                                  Real_t pmin,
                                  Real_t p_cut,
                                  Real_t eosvmax)
@@ -3952,12 +3952,12 @@ void CalcPressureForElems_device(Real_t& p_new,
 static
 __device__
 __forceinline__
-void CalcSoundSpeedForElems_device(Real_t& vnewc,
+void CalcSoundSpeedForElems_device(Real_t vnewc,
                                    Real_t rho0,
-                                   Real_t &enewc,
-                                   Real_t &pnewc,
-                                   Real_t &pbvc,
-                                   Real_t &bvc,
+                                   Real_t enewc,
+                                   Real_t pnewc,
+                                   Real_t pbvc,
+                                   Real_t bvc,
                                    Real_t ss4o3,
                                    Index_t nz,
                                    #ifdef RESTRICT
@@ -3982,8 +3982,8 @@ static
 __device__
 __forceinline__ 
 void ApplyMaterialPropertiesForElems_device(
-    Real_t& eosvmin,
-    Real_t& eosvmax,
+    Real_t eosvmin,
+    Real_t eosvmax,
     #ifdef RESTRICT
     const Real_t* __restrict__ vnew,
     const Real_t *__restrict__ v,
@@ -4031,7 +4031,7 @@ static
 __device__
 __forceinline__
 void UpdateVolumesForElems_device(Index_t numElem,
-                                  Real_t& v_cut,
+                                  Real_t v_cut,
                                   const Real_t *vnew,
                                   const Real_t *v,
                                   int i)
@@ -4053,23 +4053,23 @@ void CalcEnergyForElems_device(Real_t& p_new,
                                Real_t& q_new,
                                Real_t& bvc,
                                Real_t& pbvc,
-                               Real_t& p_old,
-                               Real_t& e_old,
-                               Real_t& q_old,
-                               Real_t& compression,
-                               Real_t& compHalfStep,
-                               Real_t& vnewc,
-                               Real_t& work,
-                               Real_t& delvc,
+                               Real_t p_old,
+                               Real_t e_old,
+                               Real_t q_old,
+                               Real_t compression,
+                               Real_t compHalfStep,
+                               Real_t vnewc,
+                               Real_t work,
+                               Real_t delvc,
                                Real_t pmin,
                                Real_t p_cut,
                                Real_t e_cut,
                                Real_t q_cut,
                                Real_t emin,
-                               Real_t& qq,
-                               Real_t& ql,
-                               Real_t& rho0,
-                               Real_t& eosvmax,
+                               Real_t qq,
+                               Real_t ql,
+                               Real_t rho0,
+                               Real_t eosvmax,
                                Index_t length)
 {
    const Real_t sixth = Real_t(1.0) / Real_t(6.0) ;
@@ -5540,7 +5540,7 @@ int main(int argc, char *argv[])
 }
 
 
-__attribute__((device)) __attribute__((always_inline)) static inline void ApplyMaterialPropertiesForElems_device_pullback(Real_t &eosvmin, Real_t &eosvmax, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t &vnewc, const Index_t *__restrict bad_vol, Index_t zn, Real_t *_d_eosvmin, Real_t *_d_eosvmax, Real_t *_d_vnew, Real_t *_d_v, Real_t *_d_vnewc, Index_t *_d_bad_vol, Index_t *_d_zn) {
+__attribute__((device)) __attribute__((always_inline)) static inline void ApplyMaterialPropertiesForElems_device_pullback(Real_t eosvmin, Real_t eosvmax, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t &vnewc, const Index_t *__restrict bad_vol, Index_t zn, Real_t *_d_eosvmin, Real_t *_d_eosvmax, Real_t *_d_vnew, Real_t *_d_v, Real_t *_d_vnewc, Index_t *_d_bad_vol, Index_t *_d_zn) {
     bool _cond0;
     bool _cond1;
     bool _cond2;
@@ -5550,7 +5550,6 @@ __attribute__((device)) __attribute__((always_inline)) static inline void ApplyM
     bool _cond6;
     bool _cond7;
     bool _cond8;
-    Index_t _t0;
     vnewc = vnew[zn];
     {
         _cond0 = eosvmin != Real_t(0.);
@@ -5597,13 +5596,11 @@ __attribute__((device)) __attribute__((always_inline)) static inline void ApplyM
     {
         _cond8 = vc <= 0.;
         if (_cond8) {
-            _t0 = const_cast<Index_t &>(*bad_vol);
             const_cast<Index_t &>(*bad_vol) = zn;
         }
     }
     if (_cond8) {
         {
-            const_cast<Index_t &>(*bad_vol) = _t0;
             Index_t _r_d5 = *_d_bad_vol;
             *_d_bad_vol = 0;
             *_d_zn += _r_d5;
@@ -5681,7 +5678,7 @@ __attribute__((device)) __attribute__((host)) inline void FABS_pullback(real8 ar
         *_d_arg += _r0;
     }
 }
-__attribute__((device)) __attribute__((always_inline)) static inline void CalcPressureForElems_device_pullback(Real_t &p_new, Real_t &bvc, Real_t &pbvc, Real_t &e_old, Real_t &compression, Real_t &vnewc, Real_t pmin, Real_t p_cut, Real_t eosvmax, Real_t *_d_p_new, Real_t *_d_bvc, Real_t *_d_pbvc, Real_t *_d_e_old, Real_t *_d_compression, Real_t *_d_vnewc, Real_t *_d_pmin, Real_t *_d_p_cut, Real_t *_d_eosvmax) {
+__attribute__((device)) __attribute__((always_inline)) static inline void CalcPressureForElems_device_pullback(Real_t &p_new, Real_t &bvc, Real_t &pbvc, Real_t e_old, Real_t compression, Real_t vnewc, Real_t pmin, Real_t p_cut, Real_t eosvmax, Real_t *_d_p_new, Real_t *_d_bvc, Real_t *_d_pbvc, Real_t *_d_e_old, Real_t *_d_compression, Real_t *_d_vnewc, Real_t *_d_pmin, Real_t *_d_p_cut, Real_t *_d_eosvmax) {
     bool _cond0;
     Real_t _t1;
     bool _cond1;
@@ -5766,34 +5763,34 @@ __attribute__((device)) inline void SQRT_pullback(real8 arg, real8 _d_y, real8 *
         *_d_arg += _r0;
     }
 }
-__attribute__((device)) __attribute__((always_inline)) static inline void CalcEnergyForElems_device_pullback(Real_t &p_new, Real_t &e_new, Real_t &q_new, Real_t &bvc, Real_t &pbvc, Real_t &p_old, Real_t &e_old, Real_t &q_old, Real_t &compression, Real_t &compHalfStep, Real_t &vnewc, Real_t &work, Real_t &delvc, Real_t pmin, Real_t p_cut, Real_t e_cut, Real_t q_cut, Real_t emin, Real_t &qq, Real_t &ql, Real_t &rho0, Real_t &eosvmax, Index_t length, Real_t *_d_p_new, Real_t *_d_e_new, Real_t *_d_q_new, Real_t *_d_bvc, Real_t *_d_pbvc, Real_t *_d_p_old, Real_t *_d_e_old, Real_t *_d_q_old, Real_t *_d_compression, Real_t *_d_compHalfStep, Real_t *_d_vnewc, Real_t *_d_work, Real_t *_d_delvc, Real_t *_d_pmin, Real_t *_d_p_cut, Real_t *_d_e_cut, Real_t *_d_q_cut, Real_t *_d_emin, Real_t *_d_qq, Real_t *_d_ql, Real_t *_d_rho0, Real_t *_d_eosvmax, Index_t *_d_length) {
+__attribute__((device)) __attribute__((always_inline)) static inline void CalcEnergyForElems_device_pullback(Real_t &p_new, Real_t &e_new, Real_t &q_new, Real_t &bvc, Real_t &pbvc, Real_t p_old, Real_t e_old, Real_t q_old, Real_t compression, Real_t compHalfStep, Real_t vnewc, Real_t work, Real_t delvc, Real_t pmin, Real_t p_cut, Real_t e_cut, Real_t q_cut, Real_t emin, Real_t qq, Real_t ql, Real_t rho0, Real_t eosvmax, Index_t length, Real_t *_d_p_new, Real_t *_d_e_new, Real_t *_d_q_new, Real_t *_d_bvc, Real_t *_d_pbvc, Real_t *_d_p_old, Real_t *_d_e_old, Real_t *_d_q_old, Real_t *_d_compression, Real_t *_d_compHalfStep, Real_t *_d_vnewc, Real_t *_d_work, Real_t *_d_delvc, Real_t *_d_pmin, Real_t *_d_p_cut, Real_t *_d_e_cut, Real_t *_d_q_cut, Real_t *_d_emin, Real_t *_d_qq, Real_t *_d_ql, Real_t *_d_rho0, Real_t *_d_eosvmax, Index_t *_d_length) {
     bool _cond0;
     bool _cond1;
     Real_t _d_ssc = 0.;
     Real_t ssc = 0.;
     bool _cond2;
-    Real_t _t8;
+    Real_t _t5;
     bool _cond3;
-    Real_t _t10;
+    Real_t _t7;
     bool _cond4;
-    Real_t _t11;
+    Real_t _t8;
     bool _cond5;
     Real_t _d_ssc0 = 0.;
     Real_t ssc0 = 0.;
     bool _cond6;
-    Real_t _t18;
+    Real_t _t12;
     bool _cond7;
-    Real_t _t20;
+    Real_t _t14;
     bool _cond8;
-    Real_t _t21;
+    Real_t _t15;
     bool _cond9;
     Real_t _d_ssc1 = 0.;
     Real_t ssc1 = 0.;
     bool _cond10;
-    Real_t _t28;
-    Real_t _t29;
+    Real_t _t19;
+    Real_t _t20;
     bool _cond11;
-    Real_t _t30;
+    Real_t _t21;
     Real_t _t0 = Real_t(6.);
     Real_t _d_sixth = 0.;
     const Real_t sixth = Real_t(1.) / _t0;
@@ -5809,13 +5806,10 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
     Real_t _t1 = pHalfStep;
     Real_t _t2 = bvc;
     Real_t _t3 = pbvc;
-    Real_t _t4 = e_new;
-    Real_t _t5 = compHalfStep;
-    Real_t _t6 = vnewc;
     CalcPressureForElems_device(pHalfStep, bvc, pbvc, e_new, compHalfStep, vnewc, pmin, p_cut, eosvmax);
-    Real_t _t7 = (Real_t(1.) + compHalfStep);
+    Real_t _t4 = (Real_t(1.) + compHalfStep);
     Real_t _d_vhalf = 0.;
-    Real_t vhalf = Real_t(1.) / _t7;
+    Real_t vhalf = Real_t(1.) / _t4;
     {
         _cond1 = delvc > Real_t(0.);
         if (_cond1) {
@@ -5827,36 +5821,33 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
                 if (_cond2) {
                     ssc = Real_t(3.333333E-19);
                 } else {
-                    _t8 = ssc;
+                    _t5 = ssc;
                     ssc = SQRT(ssc);
                 }
             }
             q_new = (ssc * ql + qq);
         }
     }
-    Real_t _t9 = e_new;
+    Real_t _t6 = e_new;
     e_new = e_new + Real_t(0.5) * delvc * (Real_t(3.) * (p_old + q_old) - Real_t(4.) * (pHalfStep + q_new));
     e_new += Real_t(0.5) * work;
     {
         _cond3 = FABS(e_new) < e_cut;
         if (_cond3) {
-            _t10 = e_new;
+            _t7 = e_new;
             e_new = Real_t(0.);
         }
     }
     {
         _cond4 = e_new < emin;
         if (_cond4) {
-            _t11 = e_new;
+            _t8 = e_new;
             e_new = emin;
         }
     }
-    Real_t _t12 = p_new;
-    Real_t _t13 = bvc;
-    Real_t _t14 = pbvc;
-    Real_t _t15 = e_new;
-    Real_t _t16 = compression;
-    Real_t _t17 = vnewc;
+    Real_t _t9 = p_new;
+    Real_t _t10 = bvc;
+    Real_t _t11 = pbvc;
     CalcPressureForElems_device(p_new, bvc, pbvc, e_new, compression, vnewc, pmin, p_cut, eosvmax);
     Real_t _d_q_tilde = 0.;
     Real_t q_tilde;
@@ -5871,35 +5862,32 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
                 if (_cond6) {
                     ssc0 = Real_t(3.333333E-19);
                 } else {
-                    _t18 = ssc0;
+                    _t12 = ssc0;
                     ssc0 = SQRT(ssc0);
                 }
             }
             q_tilde = (ssc0 * ql + qq);
         }
     }
-    Real_t _t19 = e_new;
+    Real_t _t13 = e_new;
     e_new = e_new - (Real_t(7.) * (p_old + q_old) - Real_t(8.) * (pHalfStep + q_new) + (p_new + q_tilde)) * delvc * sixth;
     {
         _cond7 = FABS(e_new) < e_cut;
         if (_cond7) {
-            _t20 = e_new;
+            _t14 = e_new;
             e_new = Real_t(0.);
         }
     }
     {
         _cond8 = e_new < emin;
         if (_cond8) {
-            _t21 = e_new;
+            _t15 = e_new;
             e_new = emin;
         }
     }
-    Real_t _t22 = p_new;
-    Real_t _t23 = bvc;
-    Real_t _t24 = pbvc;
-    Real_t _t25 = e_new;
-    Real_t _t26 = compression;
-    Real_t _t27 = vnewc;
+    Real_t _t16 = p_new;
+    Real_t _t17 = bvc;
+    Real_t _t18 = pbvc;
     CalcPressureForElems_device(p_new, bvc, pbvc, e_new, compression, vnewc, pmin, p_cut, eosvmax);
     {
         _cond9 = delvc <= Real_t(0.);
@@ -5910,16 +5898,16 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
                 if (_cond10) {
                     ssc1 = Real_t(3.333333E-19);
                 } else {
-                    _t28 = ssc1;
+                    _t19 = ssc1;
                     ssc1 = SQRT(ssc1);
                 }
             }
-            _t29 = q_new;
+            _t20 = q_new;
             q_new = (ssc1 * ql + qq);
             {
                 _cond11 = FABS(q_new) < q_cut;
                 if (_cond11) {
-                    _t30 = q_new;
+                    _t21 = q_new;
                     q_new = Real_t(0.);
                 }
             }
@@ -5927,12 +5915,12 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
     }
     if (_cond9) {
         if (_cond11) {
-            q_new = _t30;
+            q_new = _t21;
             Real_t _r_d20 = *_d_q_new;
             *_d_q_new = 0.;
         }
         {
-            q_new = _t29;
+            q_new = _t20;
             Real_t _r_d19 = *_d_q_new;
             *_d_q_new = 0.;
             _d_ssc1 += _r_d19 * ql;
@@ -5946,12 +5934,12 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
             }
         } else {
             {
-                ssc1 = _t28;
+                ssc1 = _t19;
                 Real_t _r_d18 = _d_ssc1;
                 _d_ssc1 = 0.;
-                Real_t _r16 = 0.;
-                SQRT_pullback(ssc1, _r_d18, &_r16);
-                _d_ssc1 += _r16;
+                Real_t _r25 = 0.;
+                SQRT_pullback(ssc1, _r_d18, &_r25);
+                _d_ssc1 += _r25;
             }
         }
         {
@@ -5961,28 +5949,31 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
             *_d_vnewc += vnewc * _d_ssc1 / rho0 * p_new * bvc;
             *_d_bvc += vnewc * vnewc * _d_ssc1 / rho0 * p_new;
             *_d_p_new += vnewc * vnewc * bvc * _d_ssc1 / rho0;
-            Real_t _r15 = _d_ssc1 * -((pbvc * e_new + vnewc * vnewc * bvc * p_new) / (rho0 * rho0));
-            *_d_rho0 += _r15;
+            Real_t _r24 = _d_ssc1 * -((pbvc * e_new + vnewc * vnewc * bvc * p_new) / (rho0 * rho0));
+            *_d_rho0 += _r24;
         }
     }
     {
-        p_new = _t22;
-        bvc = _t23;
-        pbvc = _t24;
-        e_new = _t25;
-        compression = _t26;
-        vnewc = _t27;
-        Real_t _r12 = 0.;
-        Real_t _r13 = 0.;
-        Real_t _r14 = 0.;
-        CalcPressureForElems_device_pullback(_t22, _t23, _t24, _t25, _t26, _t27, pmin, p_cut, eosvmax, &*_d_p_new, &*_d_bvc, &*_d_pbvc, &*_d_e_new, &*_d_compression, &*_d_vnewc, &_r12, &_r13, &_r14);
-        *_d_pmin += _r12;
-        *_d_p_cut += _r13;
-        *_d_eosvmax += _r14;
+        p_new = _t16;
+        bvc = _t17;
+        pbvc = _t18;
+        Real_t _r18 = 0.;
+        Real_t _r19 = 0.;
+        Real_t _r20 = 0.;
+        Real_t _r21 = 0.;
+        Real_t _r22 = 0.;
+        Real_t _r23 = 0.;
+        CalcPressureForElems_device_pullback(_t16, _t17, _t18, e_new, compression, vnewc, pmin, p_cut, eosvmax, &*_d_p_new, &*_d_bvc, &*_d_pbvc, &_r18, &_r19, &_r20, &_r21, &_r22, &_r23);
+        *_d_e_new += _r18;
+        *_d_compression += _r19;
+        *_d_vnewc += _r20;
+        *_d_pmin += _r21;
+        *_d_p_cut += _r22;
+        *_d_eosvmax += _r23;
     }
     if (_cond8) {
         {
-            e_new = _t21;
+            e_new = _t15;
             Real_t _r_d16 = *_d_e_new;
             *_d_e_new = 0.;
             *_d_emin += _r_d16;
@@ -5990,13 +5981,13 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
     }
     if (_cond7) {
         {
-            e_new = _t20;
+            e_new = _t14;
             Real_t _r_d15 = *_d_e_new;
             *_d_e_new = 0.;
         }
     }
     {
-        e_new = _t19;
+        e_new = _t13;
         Real_t _r_d14 = *_d_e_new;
         *_d_e_new = 0.;
         *_d_e_new += _r_d14;
@@ -6029,12 +6020,12 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
             }
         } else {
             {
-                ssc0 = _t18;
+                ssc0 = _t12;
                 Real_t _r_d12 = _d_ssc0;
                 _d_ssc0 = 0.;
-                Real_t _r11 = 0.;
-                SQRT_pullback(ssc0, _r_d12, &_r11);
-                _d_ssc0 += _r11;
+                Real_t _r17 = 0.;
+                SQRT_pullback(ssc0, _r_d12, &_r17);
+                _d_ssc0 += _r17;
             }
         }
         {
@@ -6044,28 +6035,31 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
             *_d_vnewc += vnewc * _d_ssc0 / rho0 * p_new * bvc;
             *_d_bvc += vnewc * vnewc * _d_ssc0 / rho0 * p_new;
             *_d_p_new += vnewc * vnewc * bvc * _d_ssc0 / rho0;
-            Real_t _r10 = _d_ssc0 * -((pbvc * e_new + vnewc * vnewc * bvc * p_new) / (rho0 * rho0));
-            *_d_rho0 += _r10;
+            Real_t _r16 = _d_ssc0 * -((pbvc * e_new + vnewc * vnewc * bvc * p_new) / (rho0 * rho0));
+            *_d_rho0 += _r16;
         }
     }
     {
-        p_new = _t12;
-        bvc = _t13;
-        pbvc = _t14;
-        e_new = _t15;
-        compression = _t16;
-        vnewc = _t17;
-        Real_t _r7 = 0.;
-        Real_t _r8 = 0.;
-        Real_t _r9 = 0.;
-        CalcPressureForElems_device_pullback(_t12, _t13, _t14, _t15, _t16, _t17, pmin, p_cut, eosvmax, &*_d_p_new, &*_d_bvc, &*_d_pbvc, &*_d_e_new, &*_d_compression, &*_d_vnewc, &_r7, &_r8, &_r9);
-        *_d_pmin += _r7;
-        *_d_p_cut += _r8;
-        *_d_eosvmax += _r9;
+        p_new = _t9;
+        bvc = _t10;
+        pbvc = _t11;
+        Real_t _r10 = 0.;
+        Real_t _r11 = 0.;
+        Real_t _r12 = 0.;
+        Real_t _r13 = 0.;
+        Real_t _r14 = 0.;
+        Real_t _r15 = 0.;
+        CalcPressureForElems_device_pullback(_t9, _t10, _t11, e_new, compression, vnewc, pmin, p_cut, eosvmax, &*_d_p_new, &*_d_bvc, &*_d_pbvc, &_r10, &_r11, &_r12, &_r13, &_r14, &_r15);
+        *_d_e_new += _r10;
+        *_d_compression += _r11;
+        *_d_vnewc += _r12;
+        *_d_pmin += _r13;
+        *_d_p_cut += _r14;
+        *_d_eosvmax += _r15;
     }
     if (_cond4) {
         {
-            e_new = _t11;
+            e_new = _t8;
             Real_t _r_d9 = *_d_e_new;
             *_d_e_new = 0.;
             *_d_emin += _r_d9;
@@ -6073,7 +6067,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
     }
     if (_cond3) {
         {
-            e_new = _t10;
+            e_new = _t7;
             Real_t _r_d8 = *_d_e_new;
             *_d_e_new = 0.;
         }
@@ -6083,7 +6077,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
         *_d_work += Real_t(0.5) * _r_d7;
     }
     {
-        e_new = _t9;
+        e_new = _t6;
         Real_t _r_d6 = *_d_e_new;
         *_d_e_new = 0.;
         *_d_e_new += _r_d6;
@@ -6113,12 +6107,12 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
             }
         } else {
             {
-                ssc = _t8;
+                ssc = _t5;
                 Real_t _r_d4 = _d_ssc;
                 _d_ssc = 0.;
-                Real_t _r6 = 0.;
-                SQRT_pullback(ssc, _r_d4, &_r6);
-                _d_ssc += _r6;
+                Real_t _r9 = 0.;
+                SQRT_pullback(ssc, _r_d4, &_r9);
+                _d_ssc += _r9;
             }
         }
         {
@@ -6128,28 +6122,31 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
             _d_vhalf += vhalf * _d_ssc / rho0 * pHalfStep * bvc;
             *_d_bvc += vhalf * vhalf * _d_ssc / rho0 * pHalfStep;
             _d_pHalfStep += vhalf * vhalf * bvc * _d_ssc / rho0;
-            Real_t _r5 = _d_ssc * -((pbvc * e_new + vhalf * vhalf * bvc * pHalfStep) / (rho0 * rho0));
-            *_d_rho0 += _r5;
+            Real_t _r8 = _d_ssc * -((pbvc * e_new + vhalf * vhalf * bvc * pHalfStep) / (rho0 * rho0));
+            *_d_rho0 += _r8;
         }
     }
     {
-        Real_t _r4 = _d_vhalf * -(Real_t(1.) / (_t7 * _t7));
-        *_d_compHalfStep += _r4;
+        Real_t _r7 = _d_vhalf * -(Real_t(1.) / (_t4 * _t4));
+        *_d_compHalfStep += _r7;
     }
     {
         pHalfStep = _t1;
         bvc = _t2;
         pbvc = _t3;
-        e_new = _t4;
-        compHalfStep = _t5;
-        vnewc = _t6;
         Real_t _r1 = 0.;
         Real_t _r2 = 0.;
         Real_t _r3 = 0.;
-        CalcPressureForElems_device_pullback(_t1, _t2, _t3, _t4, _t5, _t6, pmin, p_cut, eosvmax, &_d_pHalfStep, &*_d_bvc, &*_d_pbvc, &*_d_e_new, &*_d_compHalfStep, &*_d_vnewc, &_r1, &_r2, &_r3);
-        *_d_pmin += _r1;
-        *_d_p_cut += _r2;
-        *_d_eosvmax += _r3;
+        Real_t _r4 = 0.;
+        Real_t _r5 = 0.;
+        Real_t _r6 = 0.;
+        CalcPressureForElems_device_pullback(_t1, _t2, _t3, e_new, compHalfStep, vnewc, pmin, p_cut, eosvmax, &_d_pHalfStep, &*_d_bvc, &*_d_pbvc, &_r1, &_r2, &_r3, &_r4, &_r5, &_r6);
+        *_d_e_new += _r1;
+        *_d_compHalfStep += _r2;
+        *_d_vnewc += _r3;
+        *_d_pmin += _r4;
+        *_d_p_cut += _r5;
+        *_d_eosvmax += _r6;
     }
     if (_cond0) {
         {
@@ -6169,7 +6166,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
     }
     Real_t _r0 = _d_sixth * -(Real_t(1.) / (_t0 * _t0));
 }
-__attribute__((device)) __attribute__((always_inline)) static inline void CalcSoundSpeedForElems_device_pullback(Real_t &vnewc, Real_t rho0, Real_t &enewc, Real_t &pnewc, Real_t &pbvc, Real_t &bvc, Real_t ss4o3, Index_t nz, const Real_t *__restrict ss, Index_t iz, Real_t *_d_vnewc, Real_t *_d_rho0, Real_t *_d_enewc, Real_t *_d_pnewc, Real_t *_d_pbvc, Real_t *_d_bvc, Real_t *_d_ss4o3, Index_t *_d_nz, Real_t *_d_ss, Index_t *_d_iz) {
+__attribute__((device)) __attribute__((always_inline)) static inline void CalcSoundSpeedForElems_device_pullback(Real_t vnewc, Real_t rho0, Real_t enewc, Real_t pnewc, Real_t pbvc, Real_t bvc, Real_t ss4o3, Index_t nz, const Real_t *__restrict ss, Index_t iz, Real_t *_d_vnewc, Real_t *_d_rho0, Real_t *_d_enewc, Real_t *_d_pnewc, Real_t *_d_pbvc, Real_t *_d_bvc, Real_t *_d_ss4o3, Index_t *_d_nz, Real_t *_d_ss, Index_t *_d_iz) {
     bool _cond0;
     Real_t _t0;
     Real_t _d_ssTmp = 0.;
@@ -6183,10 +6180,8 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcSo
             ssTmp = SQRT(ssTmp);
         }
     }
-    Real_t _t1 = const_cast<Real_t &>(ss[iz]);
     const_cast<Real_t &>(ss[iz]) = ssTmp;
     {
-        const_cast<Real_t &>(ss[iz]) = _t1;
         Real_t _r_d2 = _d_ss[iz];
         _d_ss[iz] = 0.;
         _d_ssTmp += _r_d2;
@@ -6217,7 +6212,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcSo
         *_d_rho0 += _r0;
     }
 }
-__attribute__((device)) __attribute__((always_inline)) static inline void UpdateVolumesForElems_device_pullback(Index_t numElem, Real_t &v_cut, const Real_t *vnew, const Real_t *v, int i, Index_t *_d_numElem, Real_t *_d_v_cut, Real_t *_d_vnew, Real_t *_d_v, int *_d_i) {
+__attribute__((device)) __attribute__((always_inline)) static inline void UpdateVolumesForElems_device_pullback(Index_t numElem, Real_t v_cut, const Real_t *vnew, const Real_t *v, int i, Index_t *_d_numElem, Real_t *_d_v_cut, Real_t *_d_vnew, Real_t *_d_v, int *_d_i) {
     bool _cond0;
     Real_t _t0;
     Real_t _d_tmpV = 0.;
@@ -6230,10 +6225,8 @@ __attribute__((device)) __attribute__((always_inline)) static inline void Update
             tmpV = Real_t(1.);
         }
     }
-    Real_t _t1 = const_cast<Real_t &>(v[i]);
     const_cast<Real_t &>(v[i]) = tmpV;
     {
-        const_cast<Real_t &>(v[i]) = _t1;
         Real_t _r_d2 = _d_v[i];
         _d_v[i] = 0.;
         _d_tmpV += _r_d2;
@@ -6249,10 +6242,10 @@ __attribute__((device)) __attribute__((always_inline)) static inline void Update
         _d_vnew[i] += _r_d0;
     }
 }
-__attribute__((device)) __attribute__((always_inline)) static inline void ApplyMaterialPropertiesForElems_device_pullback(Real_t &eosvmin, Real_t &eosvmax, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t &vnewc, const Index_t *__restrict bad_vol, Index_t zn, Real_t *_d_eosvmin, Real_t *_d_eosvmax, Real_t *_d_vnewc, Index_t *_d_zn);
+__attribute__((device)) __attribute__((always_inline)) static inline void ApplyMaterialPropertiesForElems_device_pullback(Real_t eosvmin, Real_t eosvmax, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t &vnewc, const Index_t *__restrict bad_vol, Index_t zn, Real_t *_d_eosvmin, Real_t *_d_eosvmax, Real_t *_d_vnewc, Index_t *_d_zn);
 __attribute__((device)) inline void giveMyRegion_pullback(const Index_t *regCSR, const Index_t i, const Index_t numReg, Index_t _d_y, Index_t *_d_i, Index_t *_d_numReg);
-__attribute__((device)) __attribute__((always_inline)) static inline void CalcSoundSpeedForElems_device_pullback(Real_t &vnewc, Real_t rho0, Real_t &enewc, Real_t &pnewc, Real_t &pbvc, Real_t &bvc, Real_t ss4o3, Index_t nz, const Real_t *__restrict ss, Index_t iz, Real_t *_d_vnewc, Real_t *_d_rho0, Real_t *_d_enewc, Real_t *_d_pnewc, Real_t *_d_pbvc, Real_t *_d_bvc, Real_t *_d_ss4o3, Index_t *_d_nz, Index_t *_d_iz);
-__attribute__((device)) __attribute__((always_inline)) static inline void UpdateVolumesForElems_device_pullback(Index_t numElem, Real_t &v_cut, const Real_t *vnew, const Real_t *v, int i, Index_t *_d_numElem, Real_t *_d_v_cut, int *_d_i);
+__attribute__((device)) __attribute__((always_inline)) static inline void CalcSoundSpeedForElems_device_pullback(Real_t vnewc, Real_t rho0, Real_t enewc, Real_t pnewc, Real_t pbvc, Real_t bvc, Real_t ss4o3, Index_t nz, const Real_t *__restrict ss, Index_t iz, Real_t *_d_vnewc, Real_t *_d_rho0, Real_t *_d_enewc, Real_t *_d_pnewc, Real_t *_d_pbvc, Real_t *_d_bvc, Real_t *_d_ss4o3, Index_t *_d_nz, Index_t *_d_iz);
+__attribute__((device)) __attribute__((always_inline)) static inline void UpdateVolumesForElems_device_pullback(Index_t numElem, Real_t v_cut, const Real_t *vnew, const Real_t *v, int i, Index_t *_d_numElem, Real_t *_d_v_cut, int *_d_i);
 __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel_grad_14(Index_t length, Real_t rho0, Real_t e_cut, Real_t emin, const Real_t *__restrict ql, const Real_t *__restrict qq, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t pmin, Real_t p_cut, Real_t q_cut, Real_t eosvmin, Real_t eosvmax, const Index_t *__restrict regElemlist, Real_t *__restrict e, const Real_t *__restrict delv, const Real_t *__restrict p, const Real_t *__restrict q, Real_t ss4o3, const Real_t *__restrict ss, Real_t v_cut, const Index_t *__restrict bad_vol, const Int_t cost, const Index_t *__restrict regCSR, const Index_t *__restrict regReps, const Index_t numReg, Real_t *_d_e) {
     Index_t _d_length = 0;
     Real_t _d_rho0 = 0.;
@@ -6271,46 +6264,33 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
     Index_t _d_zidx = 0;
     Index_t zidx = 0;
     Real_t _t2;
-    Real_t _t3;
-    Real_t _t4;
     Index_t _d_region = 0;
     Index_t region = 0;
     Index_t _d_rep = 0;
     Index_t rep = 0;
-    unsigned long _t5;
+    unsigned long _t3;
     int _d_r = 0;
     int r = 0;
-    Real_t _d_vchalf = 0.;
-    Real_t vchalf;
-    clad::tape<bool> _cond1 = {};
-    clad::tape<bool> _cond2 = {};
-    clad::tape<bool> _cond3 = {};
-    clad::tape<bool> _cond4 = {};
+    clad::tape<Real_t> _t4 = {};
+    clad::tape<Real_t> _t5 = {};
     clad::tape<Real_t> _t6 = {};
     clad::tape<Real_t> _t7 = {};
     clad::tape<Real_t> _t8 = {};
     clad::tape<Real_t> _t9 = {};
     clad::tape<Real_t> _t10 = {};
+    Real_t _d_vchalf = 0.;
+    Real_t vchalf;
     clad::tape<Real_t> _t11 = {};
     clad::tape<Real_t> _t12 = {};
+    clad::tape<bool> _cond1 = {};
+    clad::tape<bool> _cond2 = {};
+    clad::tape<bool> _cond3 = {};
+    clad::tape<bool> _cond4 = {};
     clad::tape<Real_t> _t13 = {};
     clad::tape<Real_t> _t14 = {};
     clad::tape<Real_t> _t15 = {};
     clad::tape<Real_t> _t16 = {};
     clad::tape<Real_t> _t17 = {};
-    clad::tape<Real_t> _t18 = {};
-    clad::tape<Real_t> _t19 = {};
-    clad::tape<Real_t> _t20 = {};
-    clad::tape<Real_t> _t21 = {};
-    clad::tape<Real_t> _t22 = {};
-    Real_t _t23;
-    Real_t _t24;
-    Real_t _t25;
-    Real_t _t26;
-    Real_t _t27;
-    Real_t _t28;
-    Real_t _t29;
-    Real_t _t30;
     Real_t _d_e_old = 0., _d_delvc = 0., _d_p_old = 0., _d_q_old = 0., _d_e_temp = 0., _d_delvc_temp = 0., _d_p_temp = 0., _d_q_temp = 0.;
     Real_t e_old, delvc, p_old, q_old, e_temp, delvc_temp, p_temp, q_temp;
     Real_t _d_compression = 0., _d_compHalfStep = 0.;
@@ -6329,9 +6309,7 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
         _cond0 = i < length;
         if (_cond0) {
             zidx = regElemlist[i];
-            _t2 = eosvmin;
-            _t3 = eosvmax;
-            _t4 = vnewc;
+            _t2 = vnewc;
             ApplyMaterialPropertiesForElems_device(eosvmin, eosvmax, vnew, v, vnewc, bad_vol, zidx);
             region = giveMyRegion(regCSR, i, numReg);
             rep = regReps[region];
@@ -6341,22 +6319,31 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
             qq_temp = qq[zidx];
             ql_temp = ql[zidx];
             delvc_temp = delv[zidx];
-            _t5 = 0UL;
+            _t3 = 0UL;
             for (r = 0; ; r++) {
                 {
                     if (!(r < rep))
                         break;
                 }
-                _t5++;
+                _t3++;
+                // clad::push(_t4, e_old);
                 e_old = e_temp;
+                // clad::push(_t5, p_old);
                 p_old = p_temp;
+                // clad::push(_t6, q_old);
                 q_old = q_temp;
+                // clad::push(_t7, qq_old);
                 qq_old = qq_temp;
+                // clad::push(_t8, ql_old);
                 ql_old = ql_temp;
+                // clad::push(_t9, delvc);
                 delvc = delvc_temp;
+                // clad::push(_t10, work);
                 work = Real_t(0.);
+                // clad::push(_t11, compression);
                 compression = Real_t(1.) / vnewc - Real_t(1.);
                 vchalf = vnewc - delvc * Real_t(0.5);
+                // clad::push(_t12, compHalfStep);
                 compHalfStep = Real_t(1.) / vchalf - Real_t(1.);
                 {
                     clad::push(_cond1, eosvmin != Real_t(0.));
@@ -6382,125 +6369,109 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                         }
                     }
                 }
-                clad::push(_t6, p_new);
-                clad::push(_t7, e_new);
-                clad::push(_t8, q_new);
-                clad::push(_t9, bvc);
-                clad::push(_t10, pbvc);
-                clad::push(_t11, p_old);
-                clad::push(_t12, e_old);
-                clad::push(_t13, q_old);
-                clad::push(_t14, compression);
-                clad::push(_t15, compHalfStep);
-                clad::push(_t16, vnewc);
-                clad::push(_t17, work);
-                clad::push(_t18, delvc);
-                clad::push(_t19, qq_old);
-                clad::push(_t20, ql_old);
-                clad::push(_t21, rho0);
-                clad::push(_t22, eosvmax);
+                // clad::push(_t13, p_new);
+                // clad::push(_t14, e_new);
+                // clad::push(_t15, q_new);
+                // clad::push(_t16, bvc);
+                // clad::push(_t17, pbvc);
                 CalcEnergyForElems_device(p_new, e_new, q_new, bvc, pbvc, p_old, e_old, q_old, compression, compHalfStep, vnewc, work, delvc, pmin, p_cut, e_cut, q_cut, emin, qq_old, ql_old, rho0, eosvmax, length);
             }
-            _t23 = const_cast<Real_t &>(p[zidx]);
             const_cast<Real_t &>(p[zidx]) = p_new;
             e[zidx] = e_new;
-            _t24 = const_cast<Real_t &>(q[zidx]);
             const_cast<Real_t &>(q[zidx]) = q_new;
-            _t25 = vnewc;
-            _t26 = e_new;
-            _t27 = p_new;
-            _t28 = pbvc;
-            _t29 = bvc;
             CalcSoundSpeedForElems_device(vnewc, rho0, e_new, p_new, pbvc, bvc, ss4o3, length, ss, zidx);
-            _t30 = v_cut;
             UpdateVolumesForElems_device(length, v_cut, vnew, v, zidx);
         }
     }
     if (_cond0) {
         {
-            v_cut = _t30;
-            Index_t _r15 = 0;
-            Index_t _r16 = 0;
-            UpdateVolumesForElems_device_pullback(length, _t30, vnew, v, zidx, &_r15, &_d_v_cut, &_r16);
-            _d_length += _r15;
-            _d_zidx += _r16;
+            Index_t _r34 = 0;
+            Real_t _r35 = 0.;
+            Index_t _r36 = 0;
+            UpdateVolumesForElems_device_pullback(length, v_cut, vnew, v, zidx, &_r34, &_r35, &_r36);
+            _d_length += _r34;
+            _d_v_cut += _r35;
+            _d_zidx += _r36;
         }
         {
-            vnewc = _t25;
-            e_new = _t26;
-            p_new = _t27;
-            pbvc = _t28;
-            bvc = _t29;
-            Real_t _r11 = 0.;
-            Real_t _r12 = 0.;
-            Index_t _r13 = 0;
-            Index_t _r14 = 0;
-            CalcSoundSpeedForElems_device_pullback(_t25, rho0, _t26, _t27, _t28, _t29, ss4o3, length, ss, zidx, &_d_vnewc, &_r11, &_d_e_new, &_d_p_new, &_d_pbvc, &_d_bvc, &_r12, &_r13, &_r14);
-            _d_rho0 += _r11;
-            _d_ss4o3 += _r12;
-            _d_length += _r13;
-            _d_zidx += _r14;
+            Real_t _r25 = 0.;
+            Real_t _r26 = 0.;
+            Real_t _r27 = 0.;
+            Real_t _r28 = 0.;
+            Real_t _r29 = 0.;
+            Real_t _r30 = 0.;
+            Real_t _r31 = 0.;
+            Index_t _r32 = 0;
+            Index_t _r33 = 0;
+            CalcSoundSpeedForElems_device_pullback(vnewc, rho0, e_new, p_new, pbvc, bvc, ss4o3, length, ss, zidx, &_r25, &_r26, &_r27, &_r28, &_r29, &_r30, &_r31, &_r32, &_r33);
+            _d_vnewc += _r25;
+            _d_rho0 += _r26;
+            _d_e_new += _r27;
+            _d_p_new += _r28;
+            _d_pbvc += _r29;
+            _d_bvc += _r30;
+            _d_ss4o3 += _r31;
+            _d_length += _r32;
+            _d_zidx += _r33;
         }
-        const_cast<Real_t &>(q[zidx]) = _t24;
         {
             Real_t _r_d20 = _d_e[zidx];
             _d_e[zidx] = 0.;
             _d_e_new += _r_d20;
         }
-        const_cast<Real_t &>(p[zidx]) = _t23;
-        for (;; _t5--) {
+        for (;; _t3--) {
             {
-                if (!_t5)
+                if (!_t3)
                     break;
             }
             {
-                p_new = clad::back(_t6);
-                e_new = clad::back(_t7);
-                q_new = clad::back(_t8);
-                bvc = clad::back(_t9);
-                pbvc = clad::back(_t10);
-                p_old = clad::back(_t11);
-                e_old = clad::back(_t12);
-                q_old = clad::back(_t13);
-                compression = clad::back(_t14);
-                compHalfStep = clad::back(_t15);
-                vnewc = clad::back(_t16);
-                work = clad::back(_t17);
-                delvc = clad::back(_t18);
-                qq_old = clad::back(_t19);
-                ql_old = clad::back(_t20);
-                rho0 = clad::back(_t21);
-                eosvmax = clad::back(_t22);
-                Real_t _r5 = 0.;
-                Real_t _r6 = 0.;
+                // p_new = clad::back(_t13);
+                // e_new = clad::back(_t14);
+                // q_new = clad::back(_t15);
+                // bvc = clad::back(_t16);
+                // pbvc = clad::back(_t17);
                 Real_t _r7 = 0.;
                 Real_t _r8 = 0.;
                 Real_t _r9 = 0.;
-                Index_t _r10 = 0;
-                CalcEnergyForElems_device_pullback(clad::back(_t6), clad::back(_t7), clad::back(_t8), clad::back(_t9), clad::back(_t10), clad::back(_t11), clad::back(_t12), clad::back(_t13), clad::back(_t14), clad::back(_t15), clad::back(_t16), clad::back(_t17), clad::back(_t18), pmin, p_cut, e_cut, q_cut, emin, clad::back(_t19), clad::back(_t20), clad::back(_t21), clad::back(_t22), length, &_d_p_new, &_d_e_new, &_d_q_new, &_d_bvc, &_d_pbvc, &_d_p_old, &_d_e_old, &_d_q_old, &_d_compression, &_d_compHalfStep, &_d_vnewc, &_d_work, &_d_delvc, &_r5, &_r6, &_r7, &_r8, &_r9, &_d_qq_old, &_d_ql_old, &_d_rho0, &_d_eosvmax, &_r10);
-                clad::pop(_t6);
-                clad::pop(_t7);
-                clad::pop(_t8);
-                clad::pop(_t9);
-                clad::pop(_t10);
-                clad::pop(_t11);
-                clad::pop(_t12);
-                clad::pop(_t13);
-                clad::pop(_t14);
-                clad::pop(_t15);
-                clad::pop(_t16);
-                clad::pop(_t17);
-                clad::pop(_t18);
-                _d_pmin += _r5;
-                _d_p_cut += _r6;
-                _d_e_cut += _r7;
-                _d_q_cut += _r8;
-                _d_emin += _r9;
-                clad::pop(_t19);
-                clad::pop(_t20);
-                clad::pop(_t21);
-                clad::pop(_t22);
-                _d_length += _r10;
+                Real_t _r10 = 0.;
+                Real_t _r11 = 0.;
+                Real_t _r12 = 0.;
+                Real_t _r13 = 0.;
+                Real_t _r14 = 0.;
+                Real_t _r15 = 0.;
+                Real_t _r16 = 0.;
+                Real_t _r17 = 0.;
+                Real_t _r18 = 0.;
+                Real_t _r19 = 0.;
+                Real_t _r20 = 0.;
+                Real_t _r21 = 0.;
+                Real_t _r22 = 0.;
+                Real_t _r23 = 0.;
+                Index_t _r24 = 0;
+                CalcEnergyForElems_device_pullback(p_new, e_new, q_new, bvc, pbvc, p_old, e_old, q_old, compression, compHalfStep, vnewc, work, delvc, pmin, p_cut, e_cut, q_cut, emin, qq_old, ql_old, rho0, eosvmax, length, &_d_p_new, &_d_e_new, &_d_q_new, &_d_bvc, &_d_pbvc, &_r7, &_r8, &_r9, &_r10, &_r11, &_r12, &_r13, &_r14, &_r15, &_r16, &_r17, &_r18, &_r19, &_r20, &_r21, &_r22, &_r23, &_r24);
+                // clad::pop(_t13);
+                // clad::pop(_t14);
+                // clad::pop(_t15);
+                // clad::pop(_t16);
+                // clad::pop(_t17);
+                _d_p_old += _r7;
+                _d_e_old += _r8;
+                _d_q_old += _r9;
+                _d_compression += _r10;
+                _d_compHalfStep += _r11;
+                _d_vnewc += _r12;
+                _d_work += _r13;
+                _d_delvc += _r14;
+                _d_pmin += _r15;
+                _d_p_cut += _r16;
+                _d_e_cut += _r17;
+                _d_q_cut += _r18;
+                _d_emin += _r19;
+                _d_qq_old += _r20;
+                _d_ql_old += _r21;
+                _d_rho0 += _r22;
+                _d_eosvmax += _r23;
+                _d_length += _r24;
             }
             {
                 if (clad::back(_cond3)) {
@@ -6540,10 +6511,11 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                 clad::pop(_cond1);
             }
             {
+                // compHalfStep = clad::pop(_t12);
                 Real_t _r_d15 = _d_compHalfStep;
                 _d_compHalfStep = 0.;
-                Real_t _r4 = _r_d15 * -(Real_t(1.) / (vchalf * vchalf));
-                _d_vchalf += _r4;
+                Real_t _r6 = _r_d15 * -(Real_t(1.) / (vchalf * vchalf));
+                _d_vchalf += _r6;
             }
             {
                 Real_t _r_d14 = _d_vchalf;
@@ -6552,44 +6524,51 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                 _d_delvc += -_r_d14 * Real_t(0.5);
             }
             {
+                // compression = clad::pop(_t11);
                 Real_t _r_d13 = _d_compression;
                 _d_compression = 0.;
-                Real_t _r3 = _r_d13 * -(Real_t(1.) / (vnewc * vnewc));
-                _d_vnewc += _r3;
+                Real_t _r5 = _r_d13 * -(Real_t(1.) / (vnewc * vnewc));
+                _d_vnewc += _r5;
             }
             _d_vchalf = 0.;
             {
+                // work = clad::pop(_t10);
                 Real_t _r_d12 = _d_work;
                 _d_work = 0.;
             }
             {
+                // delvc = clad::pop(_t9);
                 Real_t _r_d11 = _d_delvc;
                 _d_delvc = 0.;
                 _d_delvc_temp += _r_d11;
             }
             {
+                // ql_old = clad::pop(_t8);
                 Real_t _r_d10 = _d_ql_old;
                 _d_ql_old = 0.;
                 _d_ql_temp += _r_d10;
             }
             {
+                // qq_old = clad::pop(_t7);
                 Real_t _r_d9 = _d_qq_old;
                 _d_qq_old = 0.;
                 _d_qq_temp += _r_d9;
             }
             {
+                // q_old = clad::pop(_t6);
                 Real_t _r_d8 = _d_q_old;
                 _d_q_old = 0.;
                 _d_q_temp += _r_d8;
             }
             {
+                // p_old = clad::pop(_t5);
                 Real_t _r_d7 = _d_p_old;
                 _d_p_old = 0.;
                 _d_p_temp += _r_d7;
             }
             {
+                // e_old = clad::pop(_t4);
                 Real_t _r_d6 = _d_e_old;
-                printf("_d_e_old: %f\n", _r_d6);
                 _d_e_old = 0.;
                 _d_e_temp += _r_d6;
             }
@@ -6620,23 +6599,25 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
             _d_e[zidx] += _r_d0;
         }
         {
-            Index_t _r1 = 0;
-            Index_t _r2 = 0;
-            giveMyRegion_pullback(regCSR, i, numReg, _d_region, &_r1, &_r2);
-            _d_i += _r1;
-            _d_numReg += _r2;
+            Index_t _r3 = 0;
+            Index_t _r4 = 0;
+            giveMyRegion_pullback(regCSR, i, numReg, _d_region, &_r3, &_r4);
+            _d_i += _r3;
+            _d_numReg += _r4;
         }
         {
-            eosvmin = _t2;
-            eosvmax = _t3;
-            vnewc = _t4;
-            Index_t _r0 = 0;
-            ApplyMaterialPropertiesForElems_device_pullback(_t2, _t3, vnew, v, _t4, bad_vol, zidx, &_d_eosvmin, &_d_eosvmax, &_d_vnewc, &_r0);
-            _d_zidx += _r0;
+            vnewc = _t2;
+            Real_t _r0 = 0.;
+            Real_t _r1 = 0.;
+            Index_t _r2 = 0;
+            ApplyMaterialPropertiesForElems_device_pullback(eosvmin, eosvmax, vnew, v, _t2, bad_vol, zidx, &_r0, &_r1, &_d_vnewc, &_r2);
+            _d_eosvmin += _r0;
+            _d_eosvmax += _r1;
+            _d_zidx += _r2;
         }
     }
 }
-__attribute__((device)) __attribute__((always_inline)) static inline void ApplyMaterialPropertiesForElems_device_pullback(Real_t &eosvmin, Real_t &eosvmax, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t &vnewc, const Index_t *__restrict bad_vol, Index_t zn, Real_t *_d_eosvmin, Real_t *_d_eosvmax, Real_t *_d_vnewc, Index_t *_d_zn) {
+__attribute__((device)) __attribute__((always_inline)) static inline void ApplyMaterialPropertiesForElems_device_pullback(Real_t eosvmin, Real_t eosvmax, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t &vnewc, const Index_t *__restrict bad_vol, Index_t zn, Real_t *_d_eosvmin, Real_t *_d_eosvmax, Real_t *_d_vnewc, Index_t *_d_zn) {
     bool _cond0;
     bool _cond1;
     bool _cond2;
@@ -6646,7 +6627,6 @@ __attribute__((device)) __attribute__((always_inline)) static inline void ApplyM
     bool _cond6;
     bool _cond7;
     bool _cond8;
-    Index_t _t0;
     vnewc = vnew[zn];
     {
         _cond0 = eosvmin != Real_t(0.);
@@ -6693,12 +6673,10 @@ __attribute__((device)) __attribute__((always_inline)) static inline void ApplyM
     {
         _cond8 = vc <= 0.;
         if (_cond8) {
-            _t0 = const_cast<Index_t &>(*bad_vol);
             const_cast<Index_t &>(*bad_vol) = zn;
         }
     }
     if (_cond8) {
-        const_cast<Index_t &>(*bad_vol) = _t0;
     }
     if (_cond6) {
         if (_cond7) {
@@ -6763,7 +6741,7 @@ __attribute__((device)) inline void giveMyRegion_pullback(const Index_t *regCSR,
         clad::pop(_cond0);
     }
 }
-__attribute__((device)) __attribute__((always_inline)) static inline void CalcSoundSpeedForElems_device_pullback(Real_t &vnewc, Real_t rho0, Real_t &enewc, Real_t &pnewc, Real_t &pbvc, Real_t &bvc, Real_t ss4o3, Index_t nz, const Real_t *__restrict ss, Index_t iz, Real_t *_d_vnewc, Real_t *_d_rho0, Real_t *_d_enewc, Real_t *_d_pnewc, Real_t *_d_pbvc, Real_t *_d_bvc, Real_t *_d_ss4o3, Index_t *_d_nz, Index_t *_d_iz) {
+__attribute__((device)) __attribute__((always_inline)) static inline void CalcSoundSpeedForElems_device_pullback(Real_t vnewc, Real_t rho0, Real_t enewc, Real_t pnewc, Real_t pbvc, Real_t bvc, Real_t ss4o3, Index_t nz, const Real_t *__restrict ss, Index_t iz, Real_t *_d_vnewc, Real_t *_d_rho0, Real_t *_d_enewc, Real_t *_d_pnewc, Real_t *_d_pbvc, Real_t *_d_bvc, Real_t *_d_ss4o3, Index_t *_d_nz, Index_t *_d_iz) {
     bool _cond0;
     Real_t _t0;
     Real_t _d_ssTmp = 0.;
@@ -6777,9 +6755,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcSo
             ssTmp = SQRT(ssTmp);
         }
     }
-    Real_t _t1 = const_cast<Real_t &>(ss[iz]);
     const_cast<Real_t &>(ss[iz]) = ssTmp;
-    const_cast<Real_t &>(ss[iz]) = _t1;
     if (_cond0) {
         {
             Real_t _r_d0 = _d_ssTmp;
@@ -6806,7 +6782,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcSo
         *_d_rho0 += _r0;
     }
 }
-__attribute__((device)) __attribute__((always_inline)) static inline void UpdateVolumesForElems_device_pullback(Index_t numElem, Real_t &v_cut, const Real_t *vnew, const Real_t *v, int i, Index_t *_d_numElem, Real_t *_d_v_cut, int *_d_i) {
+__attribute__((device)) __attribute__((always_inline)) static inline void UpdateVolumesForElems_device_pullback(Index_t numElem, Real_t v_cut, const Real_t *vnew, const Real_t *v, int i, Index_t *_d_numElem, Real_t *_d_v_cut, int *_d_i) {
     bool _cond0;
     Real_t _t0;
     Real_t _d_tmpV = 0.;
@@ -6819,9 +6795,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void Update
             tmpV = Real_t(1.);
         }
     }
-    Real_t _t1 = const_cast<Real_t &>(v[i]);
     const_cast<Real_t &>(v[i]) = tmpV;
-    const_cast<Real_t &>(v[i]) = _t1;
     if (_cond0) {
         tmpV = _t0;
         Real_t _r_d1 = _d_tmpV;
