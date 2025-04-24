@@ -1585,7 +1585,7 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
         // same as the call expression as it is the type used to declare the
         // _gradX array
         if (!utils::hasNonDifferentiableAttribute(arg)) {
-          QualType dArgTy = getNonConstType(arg->getType(), m_Context, m_Sema);
+          QualType dArgTy = utils::getNonConstType(arg->getType(), m_Sema);
           VarDecl* dArgDecl = BuildVarDecl(dArgTy, "_r", getZeroInit(dArgTy));
           PreCallStmts.push_back(BuildDeclStmt(dArgDecl));
           DeclRefExpr* dArgRef = BuildDeclRef(dArgDecl);
@@ -4136,17 +4136,18 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
         adjointArg = BuildDeclRef(dArgDecl);
         argDiff = Visit(arg, BuildDeclRef(dArgDecl));
       }
-      
-      if (utils::isArrayOrPointerType(ArgTy)) {
-        reverseForwAdjointArgs.push_back(adjointArg);
-        adjointArgs.push_back(adjointArg);
-      } else {
-        if (utils::IsReferenceOrPointerArg(arg->IgnoreParenImpCasts()))
+      if (adjointArg) {
+        if (utils::isArrayOrPointerType(ArgTy)) {
           reverseForwAdjointArgs.push_back(adjointArg);
-        else
-          reverseForwAdjointArgs.push_back(getZeroInit(ArgTy));
-        adjointArgs.push_back(BuildOp(UnaryOperatorKind::UO_AddrOf, adjointArg,
-                                      m_DiffReq->getLocation()));
+          adjointArgs.push_back(adjointArg);
+        } else {
+          if (utils::IsReferenceOrPointerArg(arg->IgnoreParenImpCasts()))
+            reverseForwAdjointArgs.push_back(adjointArg);
+          else
+            reverseForwAdjointArgs.push_back(getZeroInit(ArgTy));
+          adjointArgs.push_back(BuildOp(UnaryOperatorKind::UO_AddrOf, adjointArg,
+                                        m_DiffReq->getLocation()));
+        }
       }
       // If a function returns an object by value, there
       // are an implicit move constructor and an implicit
@@ -4223,7 +4224,7 @@ Expr* ReverseModeVisitor::getStdInitListSizeExpr(const Expr* E) {
         pullbackRequest.EnableTBRAnalysis = m_DiffReq.EnableTBRAnalysis;
         pullbackRequest.EnableVariedAnalysis = m_DiffReq.EnableVariedAnalysis;
         for (size_t i = 0, e = CD->getNumParams(); i < e; ++i)
-          if (adjointArgs[i])
+          if (!adjointArgs.empty())
             pullbackRequest.DVI.push_back(CD->getParamDecl(i));
 
         FunctionDecl* pullbackFD =
