@@ -10,7 +10,7 @@ CLANG_PATH ?= /usr/lib/llvm-19/bin/clang++
 # CLANG_PATH ?= /mnt/sabrent/wmoses/llvm13/buildall/bin/clang++
 
 OPTIMIZE    ?= yes
-VERIFY      ?= no
+VERIFY      ?= yes
 
 FORWARD     ?= no
 INLINE      ?= yes
