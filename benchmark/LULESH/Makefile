@@ -66,13 +66,13 @@ debug: 		FLAGS += $(DFLAGS)
 release: lulesh
 debug: lulesh
 
-lulesh: allocator.o lulesh.o lulesh-comms.o lulesh-comms-gpu.o
-	$(CC) $(CFLAGS) allocator.o lulesh.o lulesh-comms.o lulesh-comms-gpu.o -o lulesh $(LDFLAGS)
+lulesh: allocator.o lulesh_gradient.o lulesh.o lulesh-comms.o lulesh-comms-gpu.o
+	$(CC) $(CFLAGS) allocator.o lulesh_gradient.o lulesh.o lulesh-comms.o lulesh-comms-gpu.o -o lulesh $(LDFLAGS)
 
 allocator.o: allocator.cu vector.h
 	$(CC) $(CFLAGS) allocator.cu -I ./ -c -o allocator.o
 
-lulesh.o: lulesh.cu util.h vector.h allocator.h
+lulesh.o: lulesh.cu util.h vector.h allocator.h lulesh.h
 	$(CC) $(CFLAGS) lulesh.cu -I ./  $(INC_SILO) -c -o lulesh.o
 
 lulesh-comms.o: lulesh-comms.cu
@@ -80,6 +80,9 @@ lulesh-comms.o: lulesh-comms.cu
 
 lulesh-comms-gpu.o: lulesh-comms-gpu.cu
 	$(CC) $(CFLAGS) lulesh-comms-gpu.cu -I ./ -c -o lulesh-comms-gpu.o
+
+lulesh_gradient.o: lulesh_gradient.cu util.h vector.h allocator.h lulesh.h
+	$(CC) $(CFLAGS) lulesh_gradient.cu -I ./  $(INC_SILO) -c -o lulesh_gradient.o
 
 clean: 
 	rm -rf allocator.o lulesh-comms.o lulesh-comms-gpu.o lulesh.o lulesh xyz.asc regNumList.txt Derivatives.cpp Derivatives.o

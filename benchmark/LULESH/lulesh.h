@@ -1,3 +1,5 @@
+#pragma once
+
 #include "vector.h"
 
 #define LULESH_SHOW_PROGRESS 0
@@ -331,3 +333,121 @@ Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel_grad_14(
     Real_t v_cut, const Index_t *__restrict bad_vol, const Int_t cost,
     const Index_t *__restrict regCSR, const Index_t *__restrict regReps,
     const Index_t numReg, Real_t *_d_e);
+
+
+__device__ inline real4  SQRT(real4  arg) { return sqrtf(arg) ; }
+__device__ inline real8  SQRT(real8  arg) { return sqrt(arg) ; }
+
+__device__ inline real4  CBRT(real4  arg) { return cbrtf(arg) ; }
+__device__ inline real8  CBRT(real8  arg) { return cbrt(arg) ; }
+
+__device__ __host__ inline real4  FABS(real4  arg) { return fabsf(arg) ; }
+__device__ __host__ inline real8  FABS(real8  arg) { return fabs(arg) ; }
+
+__device__ inline real4  FMAX(real4  arg1,real4  arg2) { return fmaxf(arg1,arg2) ; }
+__device__ inline real8  FMAX(real8  arg1,real8  arg2) { return fmax(arg1,arg2) ; }
+
+#define MAX(a, b) ( ((a) > (b)) ? (a) : (b))
+
+
+/* Stuff needed for boundary conditions */
+/* 2 BCs on each of 6 hexahedral faces (12 bits) */
+#define XI_M        0x00007
+#define XI_M_SYMM   0x00001
+#define XI_M_FREE   0x00002
+#define XI_M_COMM   0x00004
+
+#define XI_P        0x00038
+#define XI_P_SYMM   0x00008
+#define XI_P_FREE   0x00010
+#define XI_P_COMM   0x00020
+
+#define ETA_M       0x001c0
+#define ETA_M_SYMM  0x00040
+#define ETA_M_FREE  0x00080
+#define ETA_M_COMM  0x00100
+
+#define ETA_P       0x00e00
+#define ETA_P_SYMM  0x00200
+#define ETA_P_FREE  0x00400
+#define ETA_P_COMM  0x00800
+
+#define ZETA_M      0x07000
+#define ZETA_M_SYMM 0x01000
+#define ZETA_M_FREE 0x02000
+#define ZETA_M_COMM 0x04000
+
+#define ZETA_P      0x38000
+#define ZETA_P_SYMM 0x08000
+#define ZETA_P_FREE 0x10000
+#define ZETA_P_COMM 0x20000
+
+#define VOLUDER(a0,a1,a2,a3,a4,a5,b0,b1,b2,b3,b4,b5,dvdc)		\
+{									\
+  const Real_t twelfth = Real_t(1.0) / Real_t(12.0) ;			\
+									\
+   dvdc= 								\
+     ((a1) + (a2)) * ((b0) + (b1)) - ((a0) + (a1)) * ((b1) + (b2)) +	\
+     ((a0) + (a4)) * ((b3) + (b4)) - ((a3) + (a4)) * ((b0) + (b4)) -	\
+     ((a2) + (a5)) * ((b3) + (b5)) + ((a3) + (a5)) * ((b2) + (b5));	\
+   dvdc *= twelfth;							\
+}
+
+ __device__ void
+CalcPressureForElems_device(Real_t &p_new, Real_t &bvc, Real_t &pbvc,
+                            Real_t e_old, Real_t compression, Real_t vnewc,
+                            Real_t pmin, Real_t p_cut, Real_t eosvmax);
+
+
+__device__ 
+void ApplyMaterialPropertiesForElems_device(
+    Real_t eosvmin,
+    Real_t eosvmax,
+    #ifdef RESTRICT
+    const Real_t* __restrict__ vnew,
+    const Real_t *__restrict__ v,
+    #else
+    const Real_t*  vnew,
+    const Real_t *v,
+    #endif
+    Real_t& vnewc,
+    #ifdef RESTRICT
+    const Index_t* __restrict__ bad_vol,
+    #else
+    const Index_t* bad_vol,
+    #endif
+    Index_t zn);
+
+__device__ Index_t giveMyRegion(const Index_t *regCSR, const Index_t i,
+                                       const Index_t numReg);
+
+__device__  void CalcEnergyForElems_device(
+    Real_t &p_new, Real_t &e_new, Real_t &q_new, Real_t &bvc, Real_t &pbvc,
+    Real_t p_old, Real_t e_old, Real_t q_old, Real_t compression,
+    Real_t compHalfStep, Real_t vnewc, Real_t work, Real_t delvc, Real_t pmin,
+    Real_t p_cut, Real_t e_cut, Real_t q_cut, Real_t emin, Real_t qq, Real_t ql,
+    Real_t rho0, Real_t eosvmax, Index_t length);
+
+
+__device__
+void CalcSoundSpeedForElems_device(Real_t vnewc,
+                                   Real_t rho0,
+                                   Real_t enewc,
+                                   Real_t pnewc,
+                                   Real_t pbvc,
+                                   Real_t bvc,
+                                   Real_t ss4o3,
+                                   Index_t nz,
+                                   #ifdef RESTRICT
+                                   const Real_t *__restrict__ ss,
+                                   #else
+                                   const Real_t *ss,
+                                   #endif
+                                   Index_t iz);
+
+__device__
+void UpdateVolumesForElems_device(Index_t numElem,
+                                  Real_t v_cut,
+                                  const Real_t *vnew,
+                                  const Real_t *v,
+                                  int i);
