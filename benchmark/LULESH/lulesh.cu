@@ -4480,8 +4480,8 @@ void ApplyMaterialPropertiesAndUpdateVolume_kernel(
                 q_cut, eosvmin, eosvmax, regElemlist, e, delv, p, q, ss4o3, ss, 
                 v_cut, bad_vol, cost, regCSR, regReps, numReg, d_e);
   // grad.execute(length, rho0, e_cut, emin, ql, qq, vnew, v, pmin, p_cut, 
-  //               q_cut, eosvmin, eosvmax, regElemlist, e, delv, p, q, ss4o3, ss, 
-  //               v_cut, bad_vol, cost, regCSR, regReps, numReg, d_e);
+                // q_cut, eosvmin, eosvmax, regElemlist, e, delv, p, q, ss4o3, ss, 
+                // v_cut, bad_vol, cost, regCSR, regReps, numReg, d_e);
   // __enzyme_autodiff((void*)Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel,
   //   enzyme_const, length,
   //   enzyme_const, rho0,
@@ -5673,12 +5673,9 @@ __attribute__((device)) inline void giveMyRegion_pullback(const Index_t *regCSR,
         clad::pop(_cond0);
     }
 }
-__attribute__((device)) __attribute__((host)) inline void FABS_pullback(real8 arg, real8 _d_y, real8 *_d_arg) {
-    {
-        real8 _r0 = 0.;
-        _r0 += _d_y * clad::custom_derivatives::fabs_pushforward(arg, 1.).pushforward;
-        *_d_arg += _r0;
-    }
+__attribute__((device)) __attribute__((host)) inline clad::ValueAndPushforward<real8, real8> FABS_pushforward(real8 arg, real8 _d_arg) {
+    clad::ValueAndPushforward<double, double> _t0 = clad::custom_derivatives::fabs_pushforward(arg, _d_arg);
+    return {_t0.value, _t0.pushforward};
 }
 __attribute__((device)) __attribute__((always_inline)) static inline void CalcPressureForElems_device_pullback(Real_t &p_new, Real_t &bvc, Real_t &pbvc, Real_t e_old, Real_t compression, Real_t vnewc, Real_t pmin, Real_t p_cut, Real_t eosvmax, Real_t *_d_p_new, Real_t *_d_bvc, Real_t *_d_pbvc, Real_t *_d_e_old, Real_t *_d_compression, Real_t *_d_vnewc, Real_t *_d_pmin, Real_t *_d_p_cut, Real_t *_d_eosvmax) {
     bool _cond0;
@@ -5758,12 +5755,9 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcPr
     *_d_p_new += _d_p_temp;
     Real_t _r0 = _d_c1s * -(Real_t(2.) / (_t0 * _t0));
 }
-__attribute__((device)) inline void SQRT_pullback(real8 arg, real8 _d_y, real8 *_d_arg) {
-    {
-        real8 _r0 = 0.;
-        _r0 += _d_y * clad::custom_derivatives::sqrt_pushforward(arg, 1.).pushforward;
-        *_d_arg += _r0;
-    }
+__attribute__((device)) inline clad::ValueAndPushforward<real8, real8> SQRT_pushforward(real8 arg, real8 _d_arg) {
+    clad::ValueAndPushforward<double, double> _t0 = clad::custom_derivatives::sqrt_pushforward(arg, _d_arg);
+    return {_t0.value, _t0.pushforward};
 }
 __attribute__((device)) __attribute__((always_inline)) static inline void CalcEnergyForElems_device_pullback(Real_t &p_new, Real_t &e_new, Real_t &q_new, Real_t &bvc, Real_t &pbvc, Real_t p_old, Real_t e_old, Real_t q_old, Real_t compression, Real_t compHalfStep, Real_t vnewc, Real_t work, Real_t delvc, Real_t pmin, Real_t p_cut, Real_t e_cut, Real_t q_cut, Real_t emin, Real_t qq, Real_t ql, Real_t rho0, Real_t eosvmax, Index_t length, Real_t *_d_p_new, Real_t *_d_e_new, Real_t *_d_q_new, Real_t *_d_bvc, Real_t *_d_pbvc, Real_t *_d_p_old, Real_t *_d_e_old, Real_t *_d_q_old, Real_t *_d_compression, Real_t *_d_compHalfStep, Real_t *_d_vnewc, Real_t *_d_work, Real_t *_d_delvc, Real_t *_d_pmin, Real_t *_d_p_cut, Real_t *_d_e_cut, Real_t *_d_q_cut, Real_t *_d_emin, Real_t *_d_qq, Real_t *_d_ql, Real_t *_d_rho0, Real_t *_d_eosvmax, Index_t *_d_length) {
     bool _cond0;
@@ -5940,7 +5934,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
                 Real_t _r_d18 = _d_ssc1;
                 _d_ssc1 = 0.;
                 Real_t _r25 = 0.;
-                SQRT_pullback(ssc1, _r_d18, &_r25);
+                _r25 += _r_d18 * SQRT_pushforward(ssc1, 1.).pushforward;
                 _d_ssc1 += _r25;
             }
         }
@@ -6026,7 +6020,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
                 Real_t _r_d12 = _d_ssc0;
                 _d_ssc0 = 0.;
                 Real_t _r17 = 0.;
-                SQRT_pullback(ssc0, _r_d12, &_r17);
+                _r17 += _r_d12 * SQRT_pushforward(ssc0, 1.).pushforward;
                 _d_ssc0 += _r17;
             }
         }
@@ -6113,7 +6107,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcEn
                 Real_t _r_d4 = _d_ssc;
                 _d_ssc = 0.;
                 Real_t _r9 = 0.;
-                SQRT_pullback(ssc, _r_d4, &_r9);
+                _r9 += _r_d4 * SQRT_pushforward(ssc, 1.).pushforward;
                 _d_ssc += _r9;
             }
         }
@@ -6199,7 +6193,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcSo
             Real_t _r_d1 = _d_ssTmp;
             _d_ssTmp = 0.;
             Real_t _r1 = 0.;
-            SQRT_pullback(ssTmp, _r_d1, &_r1);
+            _r1 += _r_d1 * SQRT_pushforward(ssTmp, 1.).pushforward;
             _d_ssTmp += _r1;
         }
     }
@@ -6450,7 +6444,7 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                 Real_t _r22 = 0.;
                 Real_t _r23 = 0.;
                 Index_t _r24 = 0;
-                CalcEnergyForElems_device_pullback(p_new, e_new, q_new, bvc, pbvc, p_old, e_old, q_old, compression, compHalfStep, vnewc, work, delvc, pmin, p_cut, e_cut, q_cut, emin, qq_old, ql_old, rho0, eosvmax, length, &_d_p_new, &_d_e_new, &_d_q_new, &_d_bvc, &_d_pbvc, &_r7, &_r8, &_r9, &_r10, &_r11, &_r12, &_r13, &_r14, &_r15, &_r16, &_r17, &_r18, &_r19, &_r20, &_r21, &_r22, &_r23, &_r24);
+                CalcEnergyForElems_device_pullback(clad::back(_t13), clad::back(_t14), clad::back(_t15), clad::back(_t16), clad::back(_t17), p_old, e_old, q_old, compression, compHalfStep, vnewc, work, delvc, pmin, p_cut, e_cut, q_cut, emin, qq_old, ql_old, rho0, eosvmax, length, &_d_p_new, &_d_e_new, &_d_q_new, &_d_bvc, &_d_pbvc, &_r7, &_r8, &_r9, &_r10, &_r11, &_r12, &_r13, &_r14, &_r15, &_r16, &_r17, &_r18, &_r19, &_r20, &_r21, &_r22, &_r23, &_r24);
                 clad::pop(_t13);
                 clad::pop(_t14);
                 clad::pop(_t15);
@@ -6769,7 +6763,7 @@ __attribute__((device)) __attribute__((always_inline)) static inline void CalcSo
             Real_t _r_d1 = _d_ssTmp;
             _d_ssTmp = 0.;
             Real_t _r1 = 0.;
-            SQRT_pullback(ssTmp, _r_d1, &_r1);
+            _r1 += _r_d1 * SQRT_pushforward(ssTmp, 1.).pushforward;
             _d_ssTmp += _r1;
         }
     }
