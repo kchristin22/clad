@@ -5539,7 +5539,9 @@ int main(int argc, char *argv[])
   return 0 ;
 }
 
-
+/*---------------------------------------------------*/
+/*-------------------- GRADIENT ---------------------*/
+/*---------------------------------------------------*/
 __attribute__((device)) __attribute__((always_inline)) static inline void ApplyMaterialPropertiesForElems_device_pullback(Real_t eosvmin, Real_t eosvmax, const Real_t *__restrict vnew, const Real_t *__restrict v, Real_t &vnewc, const Index_t *__restrict bad_vol, Index_t zn, Real_t *_d_eosvmin, Real_t *_d_eosvmax, Real_t *_d_vnew, Real_t *_d_v, Real_t *_d_vnewc, Index_t *_d_bad_vol, Index_t *_d_zn) {
     bool _cond0;
     bool _cond1;
@@ -6326,24 +6328,24 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                         break;
                 }
                 _t3++;
-                // clad::push(_t4, e_old);
+                clad::push(_t4, e_old);
                 e_old = e_temp;
-                // clad::push(_t5, p_old);
+                clad::push(_t5, p_old);
                 p_old = p_temp;
-                // clad::push(_t6, q_old);
+                clad::push(_t6, q_old);
                 q_old = q_temp;
-                // clad::push(_t7, qq_old);
+                clad::push(_t7, qq_old);
                 qq_old = qq_temp;
-                // clad::push(_t8, ql_old);
+                clad::push(_t8, ql_old);
                 ql_old = ql_temp;
-                // clad::push(_t9, delvc);
+                clad::push(_t9, delvc);
                 delvc = delvc_temp;
-                // clad::push(_t10, work);
+                clad::push(_t10, work);
                 work = Real_t(0.);
-                // clad::push(_t11, compression);
+                clad::push(_t11, compression);
                 compression = Real_t(1.) / vnewc - Real_t(1.);
                 vchalf = vnewc - delvc * Real_t(0.5);
-                // clad::push(_t12, compHalfStep);
+                clad::push(_t12, compHalfStep);
                 compHalfStep = Real_t(1.) / vchalf - Real_t(1.);
                 {
                     clad::push(_cond1, eosvmin != Real_t(0.));
@@ -6369,11 +6371,11 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                         }
                     }
                 }
-                // clad::push(_t13, p_new);
-                // clad::push(_t14, e_new);
-                // clad::push(_t15, q_new);
-                // clad::push(_t16, bvc);
-                // clad::push(_t17, pbvc);
+                clad::push(_t13, p_new);
+                clad::push(_t14, e_new);
+                clad::push(_t15, q_new);
+                clad::push(_t16, bvc);
+                clad::push(_t17, pbvc);
                 CalcEnergyForElems_device(p_new, e_new, q_new, bvc, pbvc, p_old, e_old, q_old, compression, compHalfStep, vnewc, work, delvc, pmin, p_cut, e_cut, q_cut, emin, qq_old, ql_old, rho0, eosvmax, length);
             }
             const_cast<Real_t &>(p[zidx]) = p_new;
@@ -6425,11 +6427,11 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                     break;
             }
             {
-                // p_new = clad::back(_t13);
-                // e_new = clad::back(_t14);
-                // q_new = clad::back(_t15);
-                // bvc = clad::back(_t16);
-                // pbvc = clad::back(_t17);
+                p_new = clad::back(_t13);
+                e_new = clad::back(_t14);
+                q_new = clad::back(_t15);
+                bvc = clad::back(_t16);
+                pbvc = clad::back(_t17);
                 Real_t _r7 = 0.;
                 Real_t _r8 = 0.;
                 Real_t _r9 = 0.;
@@ -6449,11 +6451,11 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                 Real_t _r23 = 0.;
                 Index_t _r24 = 0;
                 CalcEnergyForElems_device_pullback(p_new, e_new, q_new, bvc, pbvc, p_old, e_old, q_old, compression, compHalfStep, vnewc, work, delvc, pmin, p_cut, e_cut, q_cut, emin, qq_old, ql_old, rho0, eosvmax, length, &_d_p_new, &_d_e_new, &_d_q_new, &_d_bvc, &_d_pbvc, &_r7, &_r8, &_r9, &_r10, &_r11, &_r12, &_r13, &_r14, &_r15, &_r16, &_r17, &_r18, &_r19, &_r20, &_r21, &_r22, &_r23, &_r24);
-                // clad::pop(_t13);
-                // clad::pop(_t14);
-                // clad::pop(_t15);
-                // clad::pop(_t16);
-                // clad::pop(_t17);
+                clad::pop(_t13);
+                clad::pop(_t14);
+                clad::pop(_t15);
+                clad::pop(_t16);
+                clad::pop(_t17);
                 _d_p_old += _r7;
                 _d_e_old += _r8;
                 _d_q_old += _r9;
@@ -6511,7 +6513,7 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                 clad::pop(_cond1);
             }
             {
-                // compHalfStep = clad::pop(_t12);
+                compHalfStep = clad::pop(_t12);
                 Real_t _r_d15 = _d_compHalfStep;
                 _d_compHalfStep = 0.;
                 Real_t _r6 = _r_d15 * -(Real_t(1.) / (vchalf * vchalf));
@@ -6524,7 +6526,7 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
                 _d_delvc += -_r_d14 * Real_t(0.5);
             }
             {
-                // compression = clad::pop(_t11);
+                compression = clad::pop(_t11);
                 Real_t _r_d13 = _d_compression;
                 _d_compression = 0.;
                 Real_t _r5 = _r_d13 * -(Real_t(1.) / (vnewc * vnewc));
@@ -6532,42 +6534,42 @@ __attribute__((device)) void Inner_ApplyMaterialPropertiesAndUpdateVolume_kernel
             }
             _d_vchalf = 0.;
             {
-                // work = clad::pop(_t10);
+                work = clad::pop(_t10);
                 Real_t _r_d12 = _d_work;
                 _d_work = 0.;
             }
             {
-                // delvc = clad::pop(_t9);
+                delvc = clad::pop(_t9);
                 Real_t _r_d11 = _d_delvc;
                 _d_delvc = 0.;
                 _d_delvc_temp += _r_d11;
             }
             {
-                // ql_old = clad::pop(_t8);
+                ql_old = clad::pop(_t8);
                 Real_t _r_d10 = _d_ql_old;
                 _d_ql_old = 0.;
                 _d_ql_temp += _r_d10;
             }
             {
-                // qq_old = clad::pop(_t7);
+                qq_old = clad::pop(_t7);
                 Real_t _r_d9 = _d_qq_old;
                 _d_qq_old = 0.;
                 _d_qq_temp += _r_d9;
             }
             {
-                // q_old = clad::pop(_t6);
+                q_old = clad::pop(_t6);
                 Real_t _r_d8 = _d_q_old;
                 _d_q_old = 0.;
                 _d_q_temp += _r_d8;
             }
             {
-                // p_old = clad::pop(_t5);
+                p_old = clad::pop(_t5);
                 Real_t _r_d7 = _d_p_old;
                 _d_p_old = 0.;
                 _d_p_temp += _r_d7;
             }
             {
-                // e_old = clad::pop(_t4);
+                e_old = clad::pop(_t4);
                 Real_t _r_d6 = _d_e_old;
                 _d_e_old = 0.;
                 _d_e_temp += _r_d6;
