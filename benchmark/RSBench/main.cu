@@ -32,7 +32,7 @@ int main(int argc, char * argv[])
 	SimulationData SD = initialize_simulation( input );
 	SimulationData GSD = move_simulation_data_to_device( input, SD );
 
-  	cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1*1024*1024*1024);
+  	cudaDeviceSetLimit(cudaLimitMallocHeapSize, 2L*1024*1024*1024);
 	stop = get_time();
 
 	printf("Initialization Complete. (%.2lf seconds)\n", stop-start);
