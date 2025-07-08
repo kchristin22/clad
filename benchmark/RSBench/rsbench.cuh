@@ -38,6 +38,34 @@ typedef struct{
 	double i;
 } RSComplex;
 
+namespace clad{
+	namespace custom_derivatives{
+			inline constexpr void constructor_pullback(RSComplex &arg, RSComplex *_d_this, RSComplex *_d_arg) noexcept {
+				{
+					(*_d_arg).i += _d_this->i;
+					_d_this->i = 0.;
+				}
+				{
+					(*_d_arg).r += _d_this->r;
+					_d_this->r = 0.;
+				}
+			}
+            inline constexpr void
+            constructor_pullback(RSComplex &&arg, RSComplex *_d_this,
+                                 RSComplex *_d_arg) noexcept
+            {
+                {
+                    (*_d_arg).i += _d_this->i;
+                    _d_this->i = 0.;
+                }
+                {
+                    (*_d_arg).r += _d_this->r;
+                    _d_this->r = 0.;
+                }
+            }
+    }
+}
+
 typedef struct{
 	int nthreads;
 	int n_nuclides;
@@ -59,6 +87,24 @@ typedef struct{
 	RSComplex MP_RF;
 	short int l_value;
 } Pole;
+
+namespace clad
+{
+    namespace custom_derivatives
+    {
+            __device__ void constructor_pullback(Pole &other, Pole *d_this,
+                                                 Pole *d_other)
+            {
+                constructor_pullback(other.MP_EA, &d_this->MP_EA,
+                                     &d_other->MP_EA);
+                constructor_pullback(other.MP_RT, &d_this->MP_RT,
+                                     &d_other->MP_RT);
+                constructor_pullback(other.MP_RA, &d_this->MP_RA,
+                                     &d_other->MP_RA);
+                d_other->l_value += d_this->l_value;
+            };
+    }
+}
 
 typedef struct{
 	double T;
