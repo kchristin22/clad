@@ -1063,7 +1063,8 @@ namespace clad {
           // DiffInputVarInfo to check if this is a variable we differentiate
           // wrt.
           for (const ValueDecl* param : diffParams)
-            if (param == FD->getParamDecl(i))
+            if (param->getName() == FD->getParamDecl(i)->getName() &&
+                param->getType() == FD->getParamDecl(i)->getType())
               FnTypes.push_back(
                   utils::GetParameterDerivativeType(S, mode, PVDTy));
         } else if (utils::IsDifferentiableType(PVDTy))
