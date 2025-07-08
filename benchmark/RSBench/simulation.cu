@@ -1356,7 +1356,7 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
             {
                 _d_neg_1n[n] += _d_t3.r;
                 _d_t3 = {0., 0.};
-                t3 = clad::pop(_t1);
+                // t3 = clad::pop(_t1);
             }
         }
         {
@@ -1627,9 +1627,9 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
             {
                 clad::custom_derivatives::constructor_pullback(poles[nuc * max_num_poles + i], &_d_pole, &_d_poles[nuc * max_num_poles + i]);
                 // printf("_d_poles[%d].MP_EA = {%0.2f, "
-                    //    "%0.2f}\n", nuc * max_num_poles + i,
-                    //    _d_poles[nuc * max_num_poles + i].MP_EA.i,
-                    //    _d_poles[nuc * max_num_poles + i].MP_EA.r);
+                //        "%0.2f}\n", nuc * max_num_poles + i,
+                //        _d_poles[nuc * max_num_poles + i].MP_EA.i,
+                //        _d_poles[nuc * max_num_poles + i].MP_EA.r);
                 _d_pole = {{0., 0.}, {0., 0.}, {0., 0.}, {0., 0.}, 0};
                 // pole = clad::pop(_t1);
             }
