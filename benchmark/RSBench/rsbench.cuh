@@ -40,7 +40,7 @@ typedef struct{
 
 namespace clad{
 	namespace custom_derivatives{
-			inline constexpr void constructor_pullback(RSComplex &arg, RSComplex *_d_this, RSComplex *_d_arg) noexcept {
+			__device__ inline constexpr void constructor_pullback(RSComplex &arg, RSComplex *_d_this, RSComplex *_d_arg) noexcept {
 				{
 					(*_d_arg).i += _d_this->i;
 					_d_this->i = 0.;
@@ -50,7 +50,7 @@ namespace clad{
 					_d_this->r = 0.;
 				}
 			}
-            inline constexpr void
+            __device__ inline constexpr void
             constructor_pullback(RSComplex &&arg, RSComplex *_d_this,
                                  RSComplex *_d_arg) noexcept
             {
@@ -92,7 +92,7 @@ namespace clad
 {
     namespace custom_derivatives
     {
-            __device__ void constructor_pullback(Pole &other, Pole *d_this,
+            __device__ inline void constructor_pullback(Pole &other, Pole *d_this,
                                                  Pole *d_other)
             {
                 constructor_pullback(other.MP_EA, &d_this->MP_EA,
@@ -181,7 +181,7 @@ __device__ void calculate_macro_xs( double * macro_xs, int mat, double E, Input 
 __device__ void calculate_micro_xs( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles);
 __device__ void calculate_micro_xs_doppler( double * micro_xs, int nuc, double E, Input input, const int * n_windows, const double * pseudo_K0RS, const Window * windows, Pole * poles, int max_num_windows, int max_num_poles );
 __device__ int pick_mat( uint64_t * seed );
-__device__ void calculate_sig_T( int nuc, double E, Input input, const double * pseudo_K0RS, RSComplex * sigTfactors );
+__device__ non_differentiable void calculate_sig_T( int nuc, double E, Input input, const double * pseudo_K0RS, RSComplex * sigTfactors );
 __device__ RSComplex fast_nuclear_W( RSComplex Z );
 __host__ __device__ double LCG_random_double(uint64_t * seed);
 __host__ __device__ uint64_t LCG_random_int(uint64_t * seed);

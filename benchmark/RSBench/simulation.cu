@@ -766,124 +766,6 @@ void run_event_based_simulation_optimization_1(Input in, SimulationData GSD, uns
 	*vhash_result = verification_scalar;
 }
 
-__attribute__((device)) void calculate_sig_T_pullback(int nuc, double E, Input input, const double *pseudo_K0RS, RSComplex *sigTfactors, int *_d_nuc, double *_d_E, RSComplex *_d_sigTfactors) {
-    int _d_i = 0;
-    int i = 0;
-    clad::tape<double> _t1 = {};
-    clad::tape<double> _t2 = {};
-    clad::tape<bool> _cond0 = {};
-    clad::tape<double> _t3 = {};
-    clad::tape<bool> _cond1 = {};
-    clad::tape<double> _t4 = {};
-    clad::tape<double> _t5 = {};
-    clad::tape<bool> _cond2 = {};
-    clad::tape<double> _t6 = {};
-    clad::tape<double> _t7 = {};
-    double _d_phi = 0.;
-    double phi;
-    unsigned long _t0 = 0UL;
-    for (i = 0; ; i++) {
-        {
-            if (!(i < 4))
-                break;
-        }
-        _t0++;
-        clad::push(_t1, phi);
-        phi = pseudo_K0RS[nuc * input.numL + i] * clad::push(_t2, sqrt(E));
-        {
-            clad::push(_cond0, i == 1);
-            if (clad::back(_cond0)) {
-                clad::push(_t3, phi);
-                phi -= -atan(phi);
-            } else {
-                clad::push(_cond1, i == 2);
-                if (clad::back(_cond1)) {
-                    clad::push(_t4, phi);
-                    phi -= atan(3. * phi / clad::push(_t5, (3. - phi * phi)));
-                } else {
-                    clad::push(_cond2, i == 3);
-                    if (clad::back(_cond2)) {
-                        clad::push(_t6, phi);
-                        phi -= atan(phi * (15. - phi * phi) / clad::push(_t7, (15. - 6. * phi * phi)));
-                    }
-                }
-            }
-        }
-        phi *= 2.;
-        sigTfactors[i].r = +cos(phi);
-        sigTfactors[i].i = -sin(phi);
-    }
-    for (;; _t0--) {
-        {
-            if (!_t0)
-                break;
-        }
-        i--;
-        {
-            double _r_d6 = _d_sigTfactors[i].i;
-            _d_sigTfactors[i].i = 0.;
-            double _r7 = 0.;
-            _r7 += -_r_d6 * clad::custom_derivatives::std::sin_pushforward(phi, 1.).pushforward;
-            _d_phi += _r7;
-        }
-        {
-            double _r_d5 = _d_sigTfactors[i].r;
-            _d_sigTfactors[i].r = 0.;
-            double _r6 = 0.;
-            _r6 += _r_d5 * clad::custom_derivatives::std::cos_pushforward(phi, 1.).pushforward;
-            _d_phi += _r6;
-        }
-        {
-            double _r_d4 = _d_phi;
-            _d_phi = 0.;
-            _d_phi += _r_d4 * 2.;
-        }
-        {
-            if (clad::back(_cond0)) {
-                phi = clad::pop(_t3);
-                double _r_d1 = _d_phi;
-                double _r1 = 0.;
-                _r1 += _r_d1 * clad::custom_derivatives::std::atan_pushforward(phi, 1.).pushforward;
-                _d_phi += _r1;
-            } else {
-                if (clad::back(_cond1)) {
-                    phi = clad::pop(_t4);
-                    double _r_d2 = _d_phi;
-                    double _r2 = 0.;
-                    _r2 += -_r_d2 * clad::custom_derivatives::std::atan_pushforward(3. * phi / clad::push(_t5, (3. - phi * phi)), 1.).pushforward;
-                    _d_phi += 3. * _r2 / clad::push(_t5, (3. - phi * phi));
-                    double _r3 = _r2 * -(3. * phi / (clad::push(_t5, (3. - phi * phi)) * clad::push(_t5, (3. - phi * phi))));
-                    _d_phi += -_r3 * phi;
-                    _d_phi += phi * -_r3;
-                } else {
-                    if (clad::back(_cond2)) {
-                        phi = clad::pop(_t6);
-                        double _r_d3 = _d_phi;
-                        double _r4 = 0.;
-                        _r4 += -_r_d3 * clad::custom_derivatives::std::atan_pushforward(phi * (15. - phi * phi) / clad::push(_t7, (15. - 6. * phi * phi)), 1.).pushforward;
-                        _d_phi += _r4 / clad::push(_t7, (15. - 6. * phi * phi)) * (15. - phi * phi);
-                        _d_phi += -phi * _r4 / clad::push(_t7, (15. - 6. * phi * phi)) * phi;
-                        _d_phi += phi * -phi * _r4 / clad::push(_t7, (15. - 6. * phi * phi));
-                        double _r5 = _r4 * -(phi * (15. - phi * phi) / (clad::push(_t7, (15. - 6. * phi * phi)) * clad::push(_t7, (15. - 6. * phi * phi))));
-                        _d_phi += 6. * -_r5 * phi;
-                        _d_phi += 6. * phi * -_r5;
-                    }
-                    clad::pop(_cond2);
-                }
-                clad::pop(_cond1);
-            }
-            clad::pop(_cond0);
-        }
-        {
-            phi = clad::pop(_t1);
-            double _r_d0 = _d_phi;
-            _d_phi = 0.;
-            double _r0 = 0.;
-            _r0 += pseudo_K0RS[nuc * input.numL + i] * _r_d0 * clad::custom_derivatives::std::sqrt_pushforward(E, 1.).pushforward;
-            *_d_E += _r0;
-        }
-    }
-}
 static inline constexpr void constructor_pullback(const Window &arg, Window *_d_this, Window *_d_arg) noexcept {
     {
         (*_d_arg).end += _d_this->end;
@@ -907,7 +789,7 @@ static inline constexpr void constructor_pullback(const Window &arg, Window *_d_
     }
 }
 
-__attribute__((host)) __attribute__((device)) void c_mul_pullback(RSComplex A, RSComplex B, RSComplex _d_y, RSComplex *_d_A, RSComplex *_d_B) {
+__attribute__((device)) void c_mul_pullback(RSComplex A, RSComplex B, RSComplex _d_y, RSComplex *_d_A, RSComplex *_d_B) {
     double _d_a = 0.;
     double a = A.r;
     double _d_b = 0.;
@@ -1097,7 +979,7 @@ __attribute__((device)) void fast_cexp_pullback(RSComplex z, RSComplex _d_y, RSC
     (*_d_z).i += _d_y0;
     (*_d_z).r += _d_x;
 }
-inline constexpr clad::ValueAndAdjoint<RSComplex &, RSComplex &>
+__device__ inline constexpr clad::ValueAndAdjoint<RSComplex &, RSComplex &>
 operator_equal_reverse_forw(RSComplex &this_1, RSComplex &&arg,
                             RSComplex *_d_this, RSComplex &&_d_arg) noexcept
 {
@@ -1105,10 +987,9 @@ operator_equal_reverse_forw(RSComplex &this_1, RSComplex &&arg,
     this_1.i = static_cast<RSComplex &&>(arg).i;
     return {this_1, *_d_this};
 }
-inline constexpr void operator_equal_pullback(RSComplex &this_1, RSComplex &&arg,
-                                              RSComplex _d_y,
-                                              RSComplex *_d_this,
-                                              RSComplex *_d_arg) noexcept
+__device__ inline constexpr void
+operator_equal_pullback(RSComplex &this_1, RSComplex &&arg, RSComplex _d_y,
+                        RSComplex *_d_this, RSComplex *_d_arg) noexcept
 {
     double _t0 = this_1.r;
     this_1.r = static_cast<RSComplex &&>(arg).r;
@@ -1490,15 +1371,15 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                 break;
         }
         _t0++;
-        clad::push(_t1, std::move(pole));
+        // clad::push(_t1, std::move(pole));
         pole = poles[nuc * max_num_poles + i];
         // clad::push(_t2, std::move(E_c));
         E_c = {E, 0};
         // clad::push(_t3, std::move(dopp_c));
         dopp_c = {dopp, 0};
-        clad::push(_t4, std::move(Z));
+        // clad::push(_t4, std::move(Z));
         Z = c_mul(c_sub(E_c, pole.MP_EA), dopp_c);
-        clad::push(_t5, std::move(faddeeva));
+        // clad::push(_t5, std::move(faddeeva));
         faddeeva = fast_nuclear_W(Z);
         // clad::push(_t6, std::move(_t10));
         _t10 = c_mul(pole.MP_RT, c_mul(faddeeva, sigTfactors[pole.l_value]));
@@ -1555,6 +1436,11 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
             {
                 RSComplex _r15 = {0., 0.};
                 RSComplex _r16 = {0., 0.};
+
+                pole = poles[nuc * max_num_poles + i];
+                Z = c_mul(c_sub(E_c, pole.MP_EA), dopp_c);
+                faddeeva = fast_nuclear_W(Z);
+
                 c_mul_pullback(pole.MP_RF, faddeeva, _d__t3, &_r15, &_r16);
                 clad::custom_derivatives::constructor_pullback(pole.MP_RF, &_r15, &_d_pole.MP_RF);
                 clad::custom_derivatives::constructor_pullback(faddeeva, &_r16, &_d_faddeeva);
@@ -1597,7 +1483,7 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                 clad::custom_derivatives::constructor_pullback(Z, &_r8, &_d_Z);
                 // printf("_d_Z = {%0.2f, %0.2f}\n", _d_Z.i, _d_Z.r);
                 _d_faddeeva = {0., 0.};
-                faddeeva = clad::pop(_t5);
+                // faddeeva = clad::pop(_t5);
             }
             {
                 RSComplex _r4 = {0., 0.};
@@ -1612,7 +1498,7 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                     //    _d_pole.MP_EA.r);
                 clad::custom_derivatives::constructor_pullback(dopp_c, &_r7, &_d_dopp_c);
                 _d_Z = {0., 0.};
-                Z = clad::pop(_t4);
+                // Z = clad::pop(_t4);
             }
             {
                 _d_dopp += _d_dopp_c.r;
@@ -1631,7 +1517,7 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                 //        _d_poles[nuc * max_num_poles + i].MP_EA.i,
                 //        _d_poles[nuc * max_num_poles + i].MP_EA.r);
                 _d_pole = {{0., 0.}, {0., 0.}, {0., 0.}, {0., 0.}, 0};
-                pole = clad::pop(_t1);
+                // pole = clad::pop(_t1);
             }
         }
         _d_w.start += _d_i;
@@ -1653,13 +1539,6 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
         _d_sigT = 0.;
         *_d_E += _r_d0 * w.T;
         _d_w.T += E * _r_d0;
-    }
-    {
-        int _r2 = 0;
-        double _r3 = 0.;
-        calculate_sig_T_pullback(nuc, E, input, pseudo_K0RS, sigTfactors, &_r2, &_r3, _d_sigTfactors);
-        *_d_nuc += _r2;
-        *_d_E += _r3;
     }
     {
         *_d_E += _d_window / spacing;
@@ -1926,13 +1805,6 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_p
         _d_w.T += E * _r_d0;
     }
     {
-        int _r2 = 0;
-        double _r3 = 0.;
-        calculate_sig_T_pullback(nuc, E, input, pseudo_K0RS, sigTfactors, &_r2, &_r3, _d_sigTfactors);
-        *_d_nuc += _r2;
-        *_d_E += _r3;
-    }
-    {
         *_d_E += _d_window / spacing;
         double _r1 = _d_window * -(E / (spacing * spacing));
         _d_spacing += _r1;
@@ -1968,7 +1840,7 @@ __attribute__((device)) void calculate_macro_xs_grad_0_11(double *__restrict mac
                 break;
         }
         _t0++;
-        clad::push(_t1, nuc);
+        // clad::push(_t1, nuc);
         nuc = mats[mat * max_num_nucs + i];
         {
             clad::push(_cond0, input.doppler == 1);
@@ -1994,6 +1866,7 @@ __attribute__((device)) void calculate_macro_xs_grad_0_11(double *__restrict mac
                 break;
         }
         i--;
+        nuc = mats[mat * max_num_nucs + i];
         {
             for (;; clad::back(_t2)--) {
                 {
@@ -2039,7 +1912,7 @@ __attribute__((device)) void calculate_macro_xs_grad_0_11(double *__restrict mac
         }
         {
             _d_nuc = 0;
-            nuc = clad::pop(_t1);
+            // nuc = clad::pop(_t1);
         }
         clad::zero_init(_d_micro_xs);
     }
