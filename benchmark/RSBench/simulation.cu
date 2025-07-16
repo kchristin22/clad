@@ -802,7 +802,7 @@ __attribute__((device)) void c_mul_pullback(RSComplex A, RSComplex B, RSComplex 
     RSComplex C;
     C.r = (a * c) - (b * d);
     C.i = (a * d) + (b * c);
-    clad::custom_derivatives::constructor_pullback(std::move(C), &_d_y, &_d_C);
+    clad::custom_derivatives::class_functions::constructor_pullback(std::move(C), &_d_y, &_d_C);
     {
         double _r_d1 = _d_C.i;
         _d_C.i = 0.;
@@ -830,7 +830,7 @@ __attribute__((device)) void c_sub_pullback(RSComplex A, RSComplex B, RSComplex 
     RSComplex C;
     C.r = A.r - B.r;
     C.i = A.i - B.i;
-    clad::custom_derivatives::constructor_pullback(std::move(C), &_d_y, &_d_C);
+    clad::custom_derivatives::class_functions::constructor_pullback(std::move(C), &_d_y, &_d_C);
     {
         double _r_d1 = _d_C.i;
         _d_C.i = 0.;
@@ -869,7 +869,7 @@ __attribute__((device)) void c_div_pullback(RSComplex A, RSComplex B, RSComplex 
     double denom = c * c + d * d;
     C.r = ((a * c) + (b * d)) / denom;
     C.i = ((b * c) - (a * d)) / denom;
-    clad::custom_derivatives::constructor_pullback(std::move(C), &_d_y, &_d_C);
+    clad::custom_derivatives::class_functions::constructor_pullback(std::move(C), &_d_y, &_d_C);
     {
         double _r_d1 = _d_C.i;
         _d_C.i = 0.;
@@ -948,13 +948,13 @@ __attribute__((device)) void fast_cexp_pullback(RSComplex z, RSComplex _d_y, RSC
     RSComplex t5 = {t1, 0};
     RSComplex _d_result = {0., 0.};
     RSComplex result = c_mul(t5, t4);
-    clad::custom_derivatives::constructor_pullback(std::move(result), &_d_y, &_d_result);
+    clad::custom_derivatives::class_functions::constructor_pullback(std::move(result), &_d_y, &_d_result);
     {
         RSComplex _r3 = {0., 0.};
         RSComplex _r4 = {0., 0.};
         c_mul_pullback(t5, t4, _d_result, &_r3, &_r4);
-        clad::custom_derivatives::constructor_pullback(t5, &_r3, &_d_t5);
-        clad::custom_derivatives::constructor_pullback(t4, &_r4, &_d_t4);
+        clad::custom_derivatives::class_functions::constructor_pullback(t5, &_r3, &_d_t5);
+        clad::custom_derivatives::class_functions::constructor_pullback(t4, &_r4, &_d_t4);
     }
     _d_t1 += _d_t5.r;
     {
@@ -1013,7 +1013,7 @@ __attribute__((device)) void c_add_pullback(RSComplex A, RSComplex B, RSComplex 
     RSComplex C;
     C.r = A.r + B.r;
     C.i = A.i + B.i;
-    clad::custom_derivatives::constructor_pullback(std::move(C), &_d_y, &_d_C);
+    clad::custom_derivatives::class_functions::constructor_pullback(std::move(C), &_d_y, &_d_C);
     {
         double _r_d1 = _d_C.i;
         _d_C.i = 0.;
@@ -1139,7 +1139,7 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
     }
     if (_cond0) {
       _label0:
-        clad::custom_derivatives::constructor_pullback(std::move(W), &_d_y, &_d_W);
+        clad::custom_derivatives::class_functions::constructor_pullback(std::move(W), &_d_y, &_d_W);
         {
             RSComplex _r31 = {0., 0.};
             W = _t9;
@@ -1147,16 +1147,16 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
             RSComplex _r32 = {0., 0.};
             RSComplex _r33 = {0., 0.};
             c_add_pullback(W, c_mul(prefactor, c_mul(Z, sum)), _r31, &_r32, &_r33);
-            clad::custom_derivatives::constructor_pullback(W, &_r32, &_d_W);
+            clad::custom_derivatives::class_functions::constructor_pullback(W, &_r32, &_d_W);
             RSComplex _r34 = {0., 0.};
             RSComplex _r35 = {0., 0.};
             c_mul_pullback(prefactor, c_mul(Z, sum), _r33, &_r34, &_r35);
-            clad::custom_derivatives::constructor_pullback(prefactor, &_r34, &_d_prefactor);
+            clad::custom_derivatives::class_functions::constructor_pullback(prefactor, &_r34, &_d_prefactor);
             RSComplex _r36 = {0., 0.};
             RSComplex _r37 = {0., 0.};
             c_mul_pullback(Z, sum, _r35, &_r36, &_r37);
-            clad::custom_derivatives::constructor_pullback(Z, &_r36, &(*_d_Z));
-            clad::custom_derivatives::constructor_pullback(sum, &_r37, &_d_sum);
+            clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r36, &(*_d_Z));
+            clad::custom_derivatives::class_functions::constructor_pullback(sum, &_r37, &_d_sum);
         }
         for (;; _t0--) {
             {
@@ -1171,16 +1171,16 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
                 RSComplex _r25 = {0., 0.};
                 RSComplex _r26 = {0., 0.};
                 c_add_pullback(sum, c_mul(t6, c_div(top, bot)), _r24, &_r25, &_r26);
-                clad::custom_derivatives::constructor_pullback(sum, &_r25, &_d_sum);
+                clad::custom_derivatives::class_functions::constructor_pullback(sum, &_r25, &_d_sum);
                 RSComplex _r27 = {0., 0.};
                 RSComplex _r28 = {0., 0.};
                 c_mul_pullback(t6, c_div(top, bot), _r26, &_r27, &_r28);
-                clad::custom_derivatives::constructor_pullback(t6, &_r27, &_d_t6);
+                clad::custom_derivatives::class_functions::constructor_pullback(t6, &_r27, &_d_t6);
                 RSComplex _r29 = {0., 0.};
                 RSComplex _r30 = {0., 0.};
                 c_div_pullback(top, bot, _r28, &_r29, &_r30);
-                clad::custom_derivatives::constructor_pullback(top, &_r29, &_d_top);
-                clad::custom_derivatives::constructor_pullback(bot, &_r30, &_d_bot);
+                clad::custom_derivatives::class_functions::constructor_pullback(top, &_r29, &_d_top);
+                clad::custom_derivatives::class_functions::constructor_pullback(bot, &_r30, &_d_bot);
                 // clad::pop(_t7);
                 // clad::pop(_t8);
             }
@@ -1193,16 +1193,16 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
                 RSComplex _r18 = {0., 0.};
                 RSComplex _r19 = {0., 0.};
                 c_sub_pullback(t4, c_mul(t5, c_mul(Z, Z)), _d_bot, &_r18, &_r19);
-                clad::custom_derivatives::constructor_pullback(t4, &_r18, &_d_t4);
+                clad::custom_derivatives::class_functions::constructor_pullback(t4, &_r18, &_d_t4);
                 RSComplex _r20 = {0., 0.};
                 RSComplex _r21 = {0., 0.};
                 c_mul_pullback(t5, c_mul(Z, Z), _r19, &_r20, &_r21);
-                clad::custom_derivatives::constructor_pullback(t5, &_r20, &_d_t5);
+                clad::custom_derivatives::class_functions::constructor_pullback(t5, &_r20, &_d_t5);
                 RSComplex _r22 = {0., 0.};
                 RSComplex _r23 = {0., 0.};
                 c_mul_pullback(Z, Z, _r21, &_r22, &_r23);
-                clad::custom_derivatives::constructor_pullback(Z, &_r22, &(*_d_Z));
-                clad::custom_derivatives::constructor_pullback(Z, &_r23, &(*_d_Z));
+                clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r22, &(*_d_Z));
+                clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r23, &(*_d_Z));
                 _d_bot = {0., 0.};
                 // bot = clad::pop(_t5);
             }
@@ -1222,15 +1222,15 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
                 RSComplex _r12 = {0., 0.};
                 RSComplex _r13 = {0., 0.};
                 c_mul_pullback(t3, fast_cexp(c_mul(t1, Z)), _r11, &_r12, &_r13);
-                clad::custom_derivatives::constructor_pullback(t3, &_r12, &_d_t3);
+                clad::custom_derivatives::class_functions::constructor_pullback(t3, &_r12, &_d_t3);
                 RSComplex _r14 = {0., 0.};
                 fast_cexp_pullback(c_mul(t1, Z), _r13, &_r14);
                 RSComplex _r15 = {0., 0.};
                 RSComplex _r16 = {0., 0.};
                 c_mul_pullback(t1, Z, _r14, &_r15, &_r16);
-                clad::custom_derivatives::constructor_pullback(t1, &_r15, &_d_t1);
-                clad::custom_derivatives::constructor_pullback(Z, &_r16, &(*_d_Z));
-                clad::custom_derivatives::constructor_pullback(one, &_r17, &_d_one);
+                clad::custom_derivatives::class_functions::constructor_pullback(t1, &_r15, &_d_t1);
+                clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r16, &(*_d_Z));
+                clad::custom_derivatives::class_functions::constructor_pullback(one, &_r17, &_d_one);
                 _d_top = {0., 0.};
                 // top = clad::pop(_t2);
             }
@@ -1247,27 +1247,33 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
             RSComplex _r1 = {0., 0.};
             RSComplex _r2 = {0., 0.};
             c_mul_pullback(i, c_sub(one, fast_cexp(c_mul(t1, Z))), _r0, &_r1, &_r2);
-            clad::custom_derivatives::constructor_pullback(i, &_r1, &_d_i);
+            clad::custom_derivatives::class_functions::constructor_pullback(
+                i, &_r1, &_d_i);
             RSComplex _r3 = {0., 0.};
             RSComplex _r4 = {0., 0.};
             c_sub_pullback(one, fast_cexp(c_mul(t1, Z)), _r2, &_r3, &_r4);
-            clad::custom_derivatives::constructor_pullback(one, &_r3, &_d_one);
+            clad::custom_derivatives::class_functions::constructor_pullback(
+                one, &_r3, &_d_one);
             RSComplex _r5 = {0., 0.};
             fast_cexp_pullback(c_mul(t1, Z), _r4, &_r5);
             RSComplex _r6 = {0., 0.};
             RSComplex _r7 = {0., 0.};
             c_mul_pullback(t1, Z, _r5, &_r6, &_r7);
-            clad::custom_derivatives::constructor_pullback(t1, &_r6, &_d_t1);
-            clad::custom_derivatives::constructor_pullback(Z, &_r7, &(*_d_Z));
+            clad::custom_derivatives::class_functions::constructor_pullback(
+                t1, &_r6, &_d_t1);
+            clad::custom_derivatives::class_functions::constructor_pullback(
+                Z, &_r7, &(*_d_Z));
             RSComplex _r9 = {0., 0.};
             RSComplex _r10 = {0., 0.};
             c_mul_pullback(t2, Z, _r8, &_r9, &_r10);
-            clad::custom_derivatives::constructor_pullback(t2, &_r9, &_d_t2);
-            clad::custom_derivatives::constructor_pullback(Z, &_r10, &(*_d_Z));
+            clad::custom_derivatives::class_functions::constructor_pullback(
+                t2, &_r9, &_d_t2);
+            clad::custom_derivatives::class_functions::constructor_pullback(
+                Z, &_r10, &(*_d_Z));
         }
     } else {
       _label1:
-        clad::custom_derivatives::constructor_pullback(std::move(W0), &_d_y, &_d_W0);
+        clad::custom_derivatives::class_functions::constructor_pullback(std::move(W0), &_d_y, &_d_W0);
         {
             RSComplex _r40 = {0., 0.};
             RSComplex _r43 = {0., 0.};
@@ -1275,36 +1281,36 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
             RSComplex _r41 = {0., 0.};
             RSComplex _r42 = {0., 0.};
             c_mul_pullback(Z, i0, _r40, &_r41, &_r42);
-            clad::custom_derivatives::constructor_pullback(Z, &_r41, &(*_d_Z));
-            clad::custom_derivatives::constructor_pullback(i0, &_r42, &_d_i0);
+            clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r41, &(*_d_Z));
+            clad::custom_derivatives::class_functions::constructor_pullback(i0, &_r42, &_d_i0);
             RSComplex _r44 = {0., 0.};
             RSComplex _r49 = {0., 0.};
             c_add_pullback(c_div(a, c_sub(Z2, b)), c_div(c, c_sub(Z2, d)), _r43, &_r44, &_r49);
             RSComplex _r45 = {0., 0.};
             RSComplex _r46 = {0., 0.};
             c_div_pullback(a, c_sub(Z2, b), _r44, &_r45, &_r46);
-            clad::custom_derivatives::constructor_pullback(a, &_r45, &_d_a);
+            clad::custom_derivatives::class_functions::constructor_pullback(a, &_r45, &_d_a);
             RSComplex _r47 = {0., 0.};
             RSComplex _r48 = {0., 0.};
             c_sub_pullback(Z2, b, _r46, &_r47, &_r48);
-            clad::custom_derivatives::constructor_pullback(Z2, &_r47, &_d_Z2);
-            clad::custom_derivatives::constructor_pullback(b, &_r48, &_d_b);
+            clad::custom_derivatives::class_functions::constructor_pullback(Z2, &_r47, &_d_Z2);
+            clad::custom_derivatives::class_functions::constructor_pullback(b, &_r48, &_d_b);
             RSComplex _r50 = {0., 0.};
             RSComplex _r51 = {0., 0.};
             c_div_pullback(c, c_sub(Z2, d), _r49, &_r50, &_r51);
-            clad::custom_derivatives::constructor_pullback(c, &_r50, &_d_c);
+            clad::custom_derivatives::class_functions::constructor_pullback(c, &_r50, &_d_c);
             RSComplex _r52 = {0., 0.};
             RSComplex _r53 = {0., 0.};
             c_sub_pullback(Z2, d, _r51, &_r52, &_r53);
-            clad::custom_derivatives::constructor_pullback(Z2, &_r52, &_d_Z2);
-            clad::custom_derivatives::constructor_pullback(d, &_r53, &_d_d);
+            clad::custom_derivatives::class_functions::constructor_pullback(Z2, &_r52, &_d_Z2);
+            clad::custom_derivatives::class_functions::constructor_pullback(d, &_r53, &_d_d);
         }
         {
             RSComplex _r38 = {0., 0.};
             RSComplex _r39 = {0., 0.};
             c_mul_pullback(Z, Z, _d_Z2, &_r38, &_r39);
-            clad::custom_derivatives::constructor_pullback(Z, &_r38, &(*_d_Z));
-            clad::custom_derivatives::constructor_pullback(Z, &_r39, &(*_d_Z));
+            clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r38, &(*_d_Z));
+            clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r39, &(*_d_Z));
         }
     }
 }
@@ -1442,8 +1448,8 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                 faddeeva = fast_nuclear_W(Z);
 
                 c_mul_pullback(pole.MP_RF, faddeeva, _d__t3, &_r15, &_r16);
-                clad::custom_derivatives::constructor_pullback(pole.MP_RF, &_r15, &_d_pole.MP_RF);
-                clad::custom_derivatives::constructor_pullback(faddeeva, &_r16, &_d_faddeeva);
+                clad::custom_derivatives::class_functions::constructor_pullback(pole.MP_RF, &_r15, &_d_pole.MP_RF);
+                clad::custom_derivatives::class_functions::constructor_pullback(faddeeva, &_r16, &_d_faddeeva);
                 _d__t3 = {0., 0.};
                 // _t30 = clad::pop(_t8);
             }
@@ -1455,8 +1461,8 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                 RSComplex _r13 = {0., 0.};
                 RSComplex _r14 = {0., 0.};
                 c_mul_pullback(pole.MP_RA, faddeeva, _d__t2, &_r13, &_r14);
-                clad::custom_derivatives::constructor_pullback(pole.MP_RA, &_r13, &_d_pole.MP_RA);
-                clad::custom_derivatives::constructor_pullback(faddeeva, &_r14, &_d_faddeeva);
+                clad::custom_derivatives::class_functions::constructor_pullback(pole.MP_RA, &_r13, &_d_pole.MP_RA);
+                clad::custom_derivatives::class_functions::constructor_pullback(faddeeva, &_r14, &_d_faddeeva);
                 _d__t2 = {0., 0.};
                 // _t20 = clad::pop(_t7);
             }
@@ -1468,19 +1474,19 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                 RSComplex _r9 = {0., 0.};
                 RSComplex _r10 = {0., 0.};
                 c_mul_pullback(pole.MP_RT, c_mul(faddeeva, sigTfactors[pole.l_value]), _d__t1, &_r9, &_r10);
-                clad::custom_derivatives::constructor_pullback(pole.MP_RT, &_r9, &_d_pole.MP_RT);
+                clad::custom_derivatives::class_functions::constructor_pullback(pole.MP_RT, &_r9, &_d_pole.MP_RT);
                 RSComplex _r11 = {0., 0.};
                 RSComplex _r12 = {0., 0.};
                 c_mul_pullback(faddeeva, sigTfactors[pole.l_value], _r10, &_r11, &_r12);
-                clad::custom_derivatives::constructor_pullback(faddeeva, &_r11, &_d_faddeeva);
-                clad::custom_derivatives::constructor_pullback(sigTfactors[pole.l_value], &_r12, &_d_sigTfactors[pole.l_value]);
+                clad::custom_derivatives::class_functions::constructor_pullback(faddeeva, &_r11, &_d_faddeeva);
+                clad::custom_derivatives::class_functions::constructor_pullback(sigTfactors[pole.l_value], &_r12, &_d_sigTfactors[pole.l_value]);
                 _d__t1 = {0., 0.};
                 // _t10 = clad::pop(_t6);
             }
             {
                 RSComplex _r8 = {0., 0.};
                 fast_nuclear_W_pullback(Z, _d_faddeeva, &_r8);
-                clad::custom_derivatives::constructor_pullback(Z, &_r8, &_d_Z);
+                clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r8, &_d_Z);
                 // printf("_d_Z = {%0.2f, %0.2f}\n", _d_Z.i, _d_Z.r);
                 _d_faddeeva = {0., 0.};
                 // faddeeva = clad::pop(_t5);
@@ -1492,11 +1498,11 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                 RSComplex _r5 = {0., 0.};
                 RSComplex _r6 = {0., 0.};
                 c_sub_pullback(E_c, pole.MP_EA, _r4, &_r5, &_r6);
-                clad::custom_derivatives::constructor_pullback(E_c, &_r5, &_d_E_c);
-                clad::custom_derivatives::constructor_pullback(pole.MP_EA, &_r6, &_d_pole.MP_EA);
+                clad::custom_derivatives::class_functions::constructor_pullback(E_c, &_r5, &_d_E_c);
+                clad::custom_derivatives::class_functions::constructor_pullback(pole.MP_EA, &_r6, &_d_pole.MP_EA);
                 // printf("_d_pole.MP_EA = {%0.2f, %0.2f}\n", _d_pole.MP_EA.i,
                     //    _d_pole.MP_EA.r);
-                clad::custom_derivatives::constructor_pullback(dopp_c, &_r7, &_d_dopp_c);
+                clad::custom_derivatives::class_functions::constructor_pullback(dopp_c, &_r7, &_d_dopp_c);
                 _d_Z = {0., 0.};
                 // Z = clad::pop(_t4);
             }
@@ -1511,7 +1517,7 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_d
                 // E_c = clad::pop(_t2);
             }
             {
-                clad::custom_derivatives::constructor_pullback(poles[nuc * max_num_poles + i], &_d_pole, &_d_poles[nuc * max_num_poles + i]);
+                clad::custom_derivatives::class_functions::constructor_pullback(poles[nuc * max_num_poles + i], &_d_pole, &_d_poles[nuc * max_num_poles + i]);
                 // printf("_d_poles[%d].MP_EA = {%0.2f, "
                 //        "%0.2f}\n", nuc * max_num_poles + i,
                 //        _d_poles[nuc * max_num_poles + i].MP_EA.i,
@@ -1691,8 +1697,8 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_p
                 RSComplex _r19 = {0., 0.};
                 RSComplex _r20 = {0., 0.};
                 c_mul_pullback(pole.MP_RF, CDUM, _d__t3, &_r19, &_r20);
-                clad::custom_derivatives::constructor_pullback(pole.MP_RF, &_r19, &_d_pole.MP_RF);
-                clad::custom_derivatives::constructor_pullback(CDUM, &_r20, &_d_CDUM);
+                clad::custom_derivatives::class_functions::constructor_pullback(pole.MP_RF, &_r19, &_d_pole.MP_RF);
+                clad::custom_derivatives::class_functions::constructor_pullback(CDUM, &_r20, &_d_CDUM);
                 _d__t3 = {0., 0.};
                 // _t30 = clad::pop(_t14);
             }
@@ -1704,8 +1710,8 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_p
                 RSComplex _r17 = {0., 0.};
                 RSComplex _r18 = {0., 0.};
                 c_mul_pullback(pole.MP_RA, CDUM, _d__t2, &_r17, &_r18);
-                clad::custom_derivatives::constructor_pullback(pole.MP_RA, &_r17, &_d_pole.MP_RA);
-                clad::custom_derivatives::constructor_pullback(CDUM, &_r18, &_d_CDUM);
+                clad::custom_derivatives::class_functions::constructor_pullback(pole.MP_RA, &_r17, &_d_pole.MP_RA);
+                clad::custom_derivatives::class_functions::constructor_pullback(CDUM, &_r18, &_d_CDUM);
                 _d__t2 = {0., 0.};
                 // _t20 = clad::pop(_t13);
             }
@@ -1717,12 +1723,12 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_p
                 RSComplex _r13 = {0., 0.};
                 RSComplex _r14 = {0., 0.};
                 c_mul_pullback(pole.MP_RT, c_mul(CDUM, sigTfactors[pole.l_value]), _d__t1, &_r13, &_r14);
-                clad::custom_derivatives::constructor_pullback(pole.MP_RT, &_r13, &_d_pole.MP_RT);
+                clad::custom_derivatives::class_functions::constructor_pullback(pole.MP_RT, &_r13, &_d_pole.MP_RT);
                 RSComplex _r15 = {0., 0.};
                 RSComplex _r16 = {0., 0.};
                 c_mul_pullback(CDUM, sigTfactors[pole.l_value], _r14, &_r15, &_r16);
-                clad::custom_derivatives::constructor_pullback(CDUM, &_r15, &_d_CDUM);
-                clad::custom_derivatives::constructor_pullback(sigTfactors[pole.l_value], &_r16, &_d_sigTfactors[pole.l_value]);
+                clad::custom_derivatives::class_functions::constructor_pullback(CDUM, &_r15, &_d_CDUM);
+                clad::custom_derivatives::class_functions::constructor_pullback(sigTfactors[pole.l_value], &_r16, &_d_sigTfactors[pole.l_value]);
                 _d__t1 = {0., 0.};
                 // _t11 = clad::pop(_t12);
             }
@@ -1733,8 +1739,8 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_p
                 RSComplex _r11 = {0., 0.};
                 RSComplex _r12 = {0., 0.};
                 c_div_pullback(PSIIKI, E_c, _r10, &_r11, &_r12);
-                clad::custom_derivatives::constructor_pullback(PSIIKI, &_r11, &_d_PSIIKI);
-                clad::custom_derivatives::constructor_pullback(E_c, &_r12, &_d_E_c);
+                clad::custom_derivatives::class_functions::constructor_pullback(PSIIKI, &_r11, &_d_PSIIKI);
+                clad::custom_derivatives::class_functions::constructor_pullback(E_c, &_r12, &_d_E_c);
                 // clad::pop(_t9);
                 // clad::pop(_t10);
             }
@@ -1750,12 +1756,12 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_p
                 RSComplex _r6 = {0., 0.};
                 RSComplex _r7 = {0., 0.};
                 c_div_pullback(t1, c_sub(pole.MP_EA, t2), _r5, &_r6, &_r7);
-                clad::custom_derivatives::constructor_pullback(t1, &_r6, &_d_t1);
+                clad::custom_derivatives::class_functions::constructor_pullback(t1, &_r6, &_d_t1);
                 RSComplex _r8 = {0., 0.};
                 RSComplex _r9 = {0., 0.};
                 c_sub_pullback(pole.MP_EA, t2, _r7, &_r8, &_r9);
-                clad::custom_derivatives::constructor_pullback(pole.MP_EA, &_r8, &_d_pole.MP_EA);
-                clad::custom_derivatives::constructor_pullback(t2, &_r9, &_d_t2);
+                clad::custom_derivatives::class_functions::constructor_pullback(pole.MP_EA, &_r8, &_d_pole.MP_EA);
+                clad::custom_derivatives::class_functions::constructor_pullback(t2, &_r9, &_d_t2);
                 // clad::pop(_t6);
                 // clad::pop(_t7);
             }
@@ -1771,7 +1777,7 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_p
                 // t1 = clad::pop(_t4);
             }
             {
-                clad::custom_derivatives::constructor_pullback(poles[nuc * max_num_poles + i], &_d_pole, &_d_poles[nuc * max_num_poles + i]);
+                clad::custom_derivatives::class_functions::constructor_pullback(poles[nuc * max_num_poles + i], &_d_pole, &_d_poles[nuc * max_num_poles + i]);
                 _d_pole = {{0., 0.}, {0., 0.}, {0., 0.}, {0., 0.}, 0};
                 // pole = clad::pop(_t3);
             }
