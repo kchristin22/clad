@@ -391,33 +391,15 @@ __device__ RSComplex fast_nuclear_W( RSComplex Z )
 	{
 		// Precomputed parts for speeding things up
 		// (N = 10, Tm = 12.0)
-		RSComplex prefactor = {0, 8.124330e+01};
-		double an[10] = {
-			2.758402e-01,
-			2.245740e-01,
-			1.594149e-01,
-			9.866577e-02,
-			5.324414e-02,
-			2.505215e-02,
-			1.027747e-02,
-			3.676164e-03,
-			1.146494e-03,
-			3.117570e-04
-		};
-		double neg_1n[10] = {
-			-1.0,
-			1.0,
-			-1.0,
-			1.0,
-			-1.0,
-			1.0,
-			-1.0,
-			1.0,
-			-1.0,
-			1.0
-		};
+		non_differentiable const RSComplex prefactor = {0, 8.124330e+01};
+        non_differentiable double an[10] = {
+            2.758402e-01, 2.245740e-01, 1.594149e-01, 9.866577e-02,
+            5.324414e-02, 2.505215e-02, 1.027747e-02, 3.676164e-03,
+            1.146494e-03, 3.117570e-04};
+        non_differentiable double neg_1n[10] = {-1.0, 1.0,  -1.0, 1.0,  -1.0,
+                                               1.0,  -1.0, 1.0,  -1.0, 1.0};
 
-		double denominator_left[10] = {
+        non_differentiable double denominator_left[10] = {
 			9.869604e+00,
 			3.947842e+01,
 			8.882644e+01,
@@ -430,22 +412,23 @@ __device__ RSComplex fast_nuclear_W( RSComplex Z )
 			9.869604e+02
 		};
 
-		RSComplex t1 = {0, 12};
-		RSComplex t2 = {12, 0};
-		RSComplex i = {0,1};
-		RSComplex one = {1, 0};
-		RSComplex W = c_div(c_mul(i, ( c_sub(one, fast_cexp(c_mul(t1, Z))) )) , c_mul(t2, Z));
-		RSComplex sum = {0,0};
+        non_differentiable RSComplex t1 = {0, 12};
+        non_differentiable RSComplex t2 = {12, 0};
+        non_differentiable RSComplex i = {0,1};
+        non_differentiable RSComplex one = {1, 0};
+        RSComplex W = c_div(
+            c_mul(i, (c_sub(one, fast_cexp(c_mul(t1, Z))))), c_mul(t2, Z));
+        RSComplex sum = {0,0};
 		// #pragma unroll
 		for( int n = 0; n < 10; n++ )
 		{
-			RSComplex t3 = {neg_1n[n], 0};
-			RSComplex top = c_sub(c_mul(t3, fast_cexp(c_mul(t1, Z))), one);
-			RSComplex t4 = {denominator_left[n], 0};
-			RSComplex t5 = {144, 0};
-			RSComplex bot = c_sub(t4, c_mul(t5,c_mul(Z,Z)));
-			RSComplex t6 = {an[n], 0};
-			sum = c_add(sum, c_mul(t6, c_div(top,bot)));
+            RSComplex t3 = {neg_1n[n], 0};
+            RSComplex top = c_sub(c_mul(t3, fast_cexp(c_mul(t1, Z))), one);
+            RSComplex t4 = {denominator_left[n], 0};
+            non_differentiable RSComplex t5 = {144, 0};
+            RSComplex bot = c_sub(t4, c_mul(t5, c_mul(Z, Z)));
+            RSComplex t6 = {an[n], 0};
+            sum = c_add(sum, c_mul(t6, c_div(top,bot)));
 		}
 		W = c_add(W, c_mul(prefactor, c_mul(Z, sum)));
 		return W;
@@ -454,13 +437,17 @@ __device__ RSComplex fast_nuclear_W( RSComplex Z )
 	{
 		// QUICK_2 3 Term Asymptotic Expansion (Accurate to O(1e-6)).
 		// Pre-computed parameters
-		RSComplex a = {0.512424224754768462984202823134979415014943561548661637413182,0};
-		RSComplex b = {0.275255128608410950901357962647054304017026259671664935783653, 0};
-		RSComplex c = {0.051765358792987823963876628425793170829107067780337219430904, 0};
-		RSComplex d = {2.724744871391589049098642037352945695982973740328335064216346, 0};
+        non_differentiable RSComplex a = {
+            0.512424224754768462984202823134979415014943561548661637413182, 0};
+        non_differentiable RSComplex b = {
+            0.275255128608410950901357962647054304017026259671664935783653, 0};
+        non_differentiable RSComplex c = {
+            0.051765358792987823963876628425793170829107067780337219430904, 0};
+        non_differentiable RSComplex d = {
+            2.724744871391589049098642037352945695982973740328335064216346, 0};
 
-		RSComplex i = {0,1};
-		RSComplex Z2 = c_mul(Z, Z);
+        non_differentiable RSComplex i = {0, 1};
+        RSComplex Z2 = c_mul(Z, Z);
 		// Three Term Asymptotic Expansion
 		RSComplex W = c_mul(c_mul(Z,i), (c_add(c_div(a,(c_sub(Z2, b))) , c_div(c,(c_sub(Z2, d))))));
 
@@ -1029,21 +1016,29 @@ __attribute__((device)) void c_add_pullback(RSComplex A, RSComplex B, RSComplex 
 }
 __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullback(RSComplex Z, RSComplex _d_y, RSComplex *_d_Z) {
     bool _cond0;
-    RSComplex _d_prefactor = {0., 0.};
     RSComplex prefactor = {0., 0.};
-    double _d_an[10] = {0};
-    clad::array<double> an(10UL);
-    double _d_neg_1n[10] = {0};
-    clad::array<double> neg_1n(10UL);
-    double _d_denominator_left[10] = {0};
-    clad::array<double> denominator_left(10UL);
-    RSComplex _d_t1 = {0., 0.};
+    // clad::array<double> an(10UL);
+    // clad::array<double> neg_1n(10UL);
+    // clad::array<double> denominator_left(10UL);
+    double an[10] = {0.27584019999999998,
+                     0.224574,
+                     0.1594149,
+                     0.09866577,
+                     0.053244140000000002,
+                     0.025052149999999999,
+                     0.01027747,
+                     0.003676164,
+                     0.0011464940000000001,
+                     3.1175700000000002E-4};
+    double neg_1n[10] = {-1., 1., -1., 1., -1., 1., -1., 1., -1., 1.};
+    double denominator_left[10] = {9.8696040000000007, 39.47842,
+                                   88.826440000000005, 157.91370000000001,
+                                   246.74010000000001, 355.30579999999998,
+                                   483.61059999999998, 631.65470000000005,
+                                   799.43799999999999, 986.96040000000005};
     RSComplex t1 = {0., 0.};
-    RSComplex _d_t2 = {0., 0.};
     RSComplex t2 = {0., 0.};
-    RSComplex _d_i = {0., 0.};
     RSComplex i = {0., 0.};
-    RSComplex _d_one = {0., 0.};
     RSComplex one = {0., 0.};
     RSComplex _d_W = {0., 0.};
     RSComplex W = {0., 0.};
@@ -1052,36 +1047,30 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
     unsigned long _t0;
     int _d_n = 0;
     int n = 0;
-    clad::tape<RSComplex> _t1 = {};
+    // clad::tape<RSComplex> _t1 = {};
     RSComplex _d_t3 = {0., 0.};
     RSComplex t3 = {0., 0.};
-    clad::tape<RSComplex> _t2 = {};
+    // clad::tape<RSComplex> _t2 = {};
     RSComplex _d_top = {0., 0.};
     RSComplex top = {0., 0.};
-    clad::tape<RSComplex> _t3 = {};
+    // clad::tape<RSComplex> _t3 = {};
     RSComplex _d_t4 = {0., 0.};
     RSComplex t4 = {0., 0.};
-    clad::tape<RSComplex> _t4 = {};
-    RSComplex _d_t5 = {0., 0.};
+    // clad::tape<RSComplex> _t4 = {};
     RSComplex t5 = {0., 0.};
-    clad::tape<RSComplex> _t5 = {};
+    // clad::tape<RSComplex> _t5 = {};
     RSComplex _d_bot = {0., 0.};
     RSComplex bot = {0., 0.};
-    clad::tape<RSComplex> _t6 = {};
+    // clad::tape<RSComplex> _t6 = {};
     RSComplex _d_t6 = {0., 0.};
     RSComplex t6 = {0., 0.};
-    clad::tape<RSComplex> _t7 = {};
-    clad::tape<clad::ValueAndAdjoint<RSComplex &, RSComplex &> > _t8 = {};
+    // clad::tape<RSComplex> _t7 = {};
+    // clad::tape<clad::ValueAndAdjoint<RSComplex &, RSComplex &> > _t8 = {};
     RSComplex _t9;
-    RSComplex _d_a = {0., 0.};
     RSComplex a = {0., 0.};
-    RSComplex _d_b = {0., 0.};
     RSComplex b = {0., 0.};
-    RSComplex _d_c = {0., 0.};
     RSComplex c = {0., 0.};
-    RSComplex _d_d = {0., 0.};
     RSComplex d = {0., 0.};
-    RSComplex _d_i0 = {0., 0.};
     RSComplex i0 = {0., 0.};
     RSComplex _d_Z2 = {0., 0.};
     RSComplex Z2 = {0., 0.};
@@ -1091,9 +1080,9 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
         _cond0 = c_abs(Z) < 6.;
         if (_cond0) {
             prefactor = {0, 81.243300000000005};
-            an = {0.27584019999999998, 0.224574, 0.1594149, 0.09866577, 0.053244140000000002, 0.025052149999999999, 0.01027747, 0.003676164, 0.0011464940000000001, 3.1175700000000002E-4};
-            neg_1n = {-1., 1., -1., 1., -1., 1., -1., 1., -1., 1.};
-            denominator_left = {9.8696040000000007, 39.47842, 88.826440000000005, 157.91370000000001, 246.74010000000001, 355.30579999999998, 483.61059999999998, 631.65470000000005, 799.43799999999999, 986.96040000000005};
+            // double an[10] = {0.27584019999999998, 0.224574, 0.1594149, 0.09866577, 0.053244140000000002, 0.025052149999999999, 0.01027747, 0.003676164, 0.0011464940000000001, 3.1175700000000002E-4};
+            // double neg_1n[10] = {-1., 1., -1., 1., -1., 1., -1., 1., -1., 1.};
+            // double denominator_left[10] = {9.8696040000000007, 39.47842, 88.826440000000005, 157.91370000000001, 246.74010000000001, 355.30579999999998, 483.61059999999998, 631.65470000000005, 799.43799999999999, 986.96040000000005};
             t1 = {0, 12};
             t2 = {12, 0};
             i = {0, 1};
@@ -1151,7 +1140,6 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
             RSComplex _r34 = {0., 0.};
             RSComplex _r35 = {0., 0.};
             c_mul_pullback(prefactor, c_mul(Z, sum), _r33, &_r34, &_r35);
-            clad::custom_derivatives::class_functions::constructor_pullback(prefactor, &_r34, &_d_prefactor);
             RSComplex _r36 = {0., 0.};
             RSComplex _r37 = {0., 0.};
             c_mul_pullback(Z, sum, _r35, &_r36, &_r37);
@@ -1185,7 +1173,6 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
                 // clad::pop(_t8);
             }
             {
-                _d_an[n] += _d_t6.r;
                 _d_t6 = {0., 0.};
                 // t6 = clad::pop(_t6);
             }
@@ -1197,7 +1184,6 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
                 RSComplex _r20 = {0., 0.};
                 RSComplex _r21 = {0., 0.};
                 c_mul_pullback(t5, c_mul(Z, Z), _r19, &_r20, &_r21);
-                clad::custom_derivatives::class_functions::constructor_pullback(t5, &_r20, &_d_t5);
                 RSComplex _r22 = {0., 0.};
                 RSComplex _r23 = {0., 0.};
                 c_mul_pullback(Z, Z, _r21, &_r22, &_r23);
@@ -1206,13 +1192,9 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
                 _d_bot = {0., 0.};
                 // bot = clad::pop(_t5);
             }
+            // t5 = clad::pop(_t4);
             {
-                _d_t5 = {0., 0.};
-                // t5 = clad::pop(_t4);
-            }
-            {
-                _d_denominator_left[n] += _d_t4.r;
-                _d_t4 = {0., 0.};
+                // _d_t4 = {0., 0.};
                 // t4 = clad::pop(_t3);
             }
             {
@@ -1228,15 +1210,12 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
                 RSComplex _r15 = {0., 0.};
                 RSComplex _r16 = {0., 0.};
                 c_mul_pullback(t1, Z, _r14, &_r15, &_r16);
-                clad::custom_derivatives::class_functions::constructor_pullback(t1, &_r15, &_d_t1);
                 clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r16, &(*_d_Z));
-                clad::custom_derivatives::class_functions::constructor_pullback(one, &_r17, &_d_one);
                 _d_top = {0., 0.};
                 // top = clad::pop(_t2);
             }
             {
-                _d_neg_1n[n] += _d_t3.r;
-                _d_t3 = {0., 0.};
+                // _d_t3 = {0., 0.};
                 // t3 = clad::pop(_t1);
             }
         }
@@ -1247,29 +1226,19 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
             RSComplex _r1 = {0., 0.};
             RSComplex _r2 = {0., 0.};
             c_mul_pullback(i, c_sub(one, fast_cexp(c_mul(t1, Z))), _r0, &_r1, &_r2);
-            clad::custom_derivatives::class_functions::constructor_pullback(
-                i, &_r1, &_d_i);
             RSComplex _r3 = {0., 0.};
             RSComplex _r4 = {0., 0.};
             c_sub_pullback(one, fast_cexp(c_mul(t1, Z)), _r2, &_r3, &_r4);
-            clad::custom_derivatives::class_functions::constructor_pullback(
-                one, &_r3, &_d_one);
             RSComplex _r5 = {0., 0.};
             fast_cexp_pullback(c_mul(t1, Z), _r4, &_r5);
             RSComplex _r6 = {0., 0.};
             RSComplex _r7 = {0., 0.};
             c_mul_pullback(t1, Z, _r5, &_r6, &_r7);
-            clad::custom_derivatives::class_functions::constructor_pullback(
-                t1, &_r6, &_d_t1);
-            clad::custom_derivatives::class_functions::constructor_pullback(
-                Z, &_r7, &(*_d_Z));
+            clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r7, &(*_d_Z));
             RSComplex _r9 = {0., 0.};
             RSComplex _r10 = {0., 0.};
             c_mul_pullback(t2, Z, _r8, &_r9, &_r10);
-            clad::custom_derivatives::class_functions::constructor_pullback(
-                t2, &_r9, &_d_t2);
-            clad::custom_derivatives::class_functions::constructor_pullback(
-                Z, &_r10, &(*_d_Z));
+            clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r10, &(*_d_Z));
         }
     } else {
       _label1:
@@ -1282,28 +1251,23 @@ __attribute__((always_inline)) __attribute__((device)) void fast_nuclear_W_pullb
             RSComplex _r42 = {0., 0.};
             c_mul_pullback(Z, i0, _r40, &_r41, &_r42);
             clad::custom_derivatives::class_functions::constructor_pullback(Z, &_r41, &(*_d_Z));
-            clad::custom_derivatives::class_functions::constructor_pullback(i0, &_r42, &_d_i0);
             RSComplex _r44 = {0., 0.};
             RSComplex _r49 = {0., 0.};
             c_add_pullback(c_div(a, c_sub(Z2, b)), c_div(c, c_sub(Z2, d)), _r43, &_r44, &_r49);
             RSComplex _r45 = {0., 0.};
             RSComplex _r46 = {0., 0.};
             c_div_pullback(a, c_sub(Z2, b), _r44, &_r45, &_r46);
-            clad::custom_derivatives::class_functions::constructor_pullback(a, &_r45, &_d_a);
             RSComplex _r47 = {0., 0.};
             RSComplex _r48 = {0., 0.};
             c_sub_pullback(Z2, b, _r46, &_r47, &_r48);
             clad::custom_derivatives::class_functions::constructor_pullback(Z2, &_r47, &_d_Z2);
-            clad::custom_derivatives::class_functions::constructor_pullback(b, &_r48, &_d_b);
             RSComplex _r50 = {0., 0.};
             RSComplex _r51 = {0., 0.};
             c_div_pullback(c, c_sub(Z2, d), _r49, &_r50, &_r51);
-            clad::custom_derivatives::class_functions::constructor_pullback(c, &_r50, &_d_c);
             RSComplex _r52 = {0., 0.};
             RSComplex _r53 = {0., 0.};
             c_sub_pullback(Z2, d, _r51, &_r52, &_r53);
             clad::custom_derivatives::class_functions::constructor_pullback(Z2, &_r52, &_d_Z2);
-            clad::custom_derivatives::class_functions::constructor_pullback(d, &_r53, &_d_d);
         }
         {
             RSComplex _r38 = {0., 0.};
