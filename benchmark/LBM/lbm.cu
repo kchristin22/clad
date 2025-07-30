@@ -31,6 +31,8 @@
 // includes, kernels
 #include "lbm_kernel.cu"
 
+#include "clad/Differentiator/Differentiator.h"
+
 #define REAL_MARGIN (CALC_INDEX(0, 0, 2, 0) - CALC_INDEX(0,0,0,0))
 #define TOTAL_MARGIN (2*PADDED_X*PADDED_Y*N_CELL_ENTRIES)
 
@@ -42,7 +44,41 @@ void CUDA_LBM_performStreamCollide( LBM_Grid srcGrid, LBM_Grid dstGrid ) {
 	dimGrid.y = SIZE_Z;
 	dimBlock.y = dimBlock.z = dimGrid.z = 1;
 	performStreamCollide_kernel<<<dimGrid, dimBlock>>>(srcGrid, dstGrid);
-  CUDA_ERRCK;
+//   CUDA_ERRCK;
+}
+
+void CUDA_LBM_kernel_inner_loop(const MAIN_Param param, LBM_Grid CUDA_srcGrid,
+                          LBM_Grid CUDA_dstGrid) {
+    int t;
+    // MAIN_initialize(&param);
+
+    for (t = 1; t <= param.nTimeSteps / 2; t++)
+    {
+        // pb_SwitchToTimer(&timers, pb_TimerID_KERNEL);
+        CUDA_LBM_performStreamCollide(CUDA_srcGrid, CUDA_dstGrid);
+        CUDA_LBM_performStreamCollide(CUDA_dstGrid, CUDA_srcGrid);
+        // pb_SwitchToTimer(&timers, pb_TimerID_COMPUTE);
+        // LBM_swapGrids(&CUDA_srcGrid, &CUDA_dstGrid);
+
+/*
+        if ((t & 63) == 0)
+        {
+            printf("timestep: %i\n", t);
+#if 0
+			CUDA_LBM_getDeviceGrid((float**)&CUDA_srcGrid, (float**)&TEMP_srcGrid);
+			LBM_showGridStatistics( *TEMP_srcGrid );
+#endif
+        }
+*/
+    }
+
+    // MAIN_finalize(&param);
+}
+
+void CUDA_LBM_kernel_loop(const MAIN_Param param, LBM_Grid CUDA_srcGrid,
+                          LBM_Grid CUDA_dstGrid){
+    auto grad =
+        clad::gradient(CUDA_LBM_kernel_inner_loop, "CUDA_srcGrid, CUDA_dstGrid");
 }
 
 /*############################################################################*/

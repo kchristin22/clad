@@ -18,37 +18,8 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 
-#include "clad/Differentiator/Differentiator.h"
-
 /*############################################################################*/
 static LBM_Grid CUDA_srcGrid, CUDA_dstGrid;
-void CUDA_LBM_kernel_loop(const MAIN_Param param, LBM_Grid CUDA_srcGrid,
-                          LBM_Grid CUDA_dstGrid) {
-    int t;
-    // MAIN_initialize(&param);
-
-    for (t = 1; t <= param.nTimeSteps / 2; t++)
-    {
-        // pb_SwitchToTimer(&timers, pb_TimerID_KERNEL);
-        CUDA_LBM_performStreamCollide(CUDA_srcGrid, CUDA_dstGrid);
-        CUDA_LBM_performStreamCollide(CUDA_dstGrid, CUDA_srcGrid);
-        // pb_SwitchToTimer(&timers, pb_TimerID_COMPUTE);
-        // LBM_swapGrids(&CUDA_srcGrid, &CUDA_dstGrid);
-
-/*
-        if ((t & 63) == 0)
-        {
-            printf("timestep: %i\n", t);
-#if 0
-			CUDA_LBM_getDeviceGrid((float**)&CUDA_srcGrid, (float**)&TEMP_srcGrid);
-			LBM_showGridStatistics( *TEMP_srcGrid );
-#endif
-        }
-*/
-    }
-
-    // MAIN_finalize(&param);
-}
 
 /*############################################################################*/
 
@@ -68,7 +39,7 @@ int main( int nArgs, char* arg[] ) {
 	MAIN_parseCommandLine( nArgs, arg, &param, params );
 	MAIN_printInfo( &param );
 
-	auto grad = clad::gradient(CUDA_LBM_kernel_loop, "CUDA_srcGrid, CUDA_dstGrid");
+    CUDA_LBM_kernel_loop(param, CUDA_srcGrid, CUDA_dstGrid);
 
 // 	MAIN_initialize( &param );
 

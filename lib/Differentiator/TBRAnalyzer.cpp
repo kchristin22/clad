@@ -147,7 +147,7 @@ TBRAnalyzer::getIDSequence(const clang::Expr* E,
   const VarDecl* innerVD = nullptr;
   // Unwrap the given expression to a vector of indices and fields.
   while (true) {
-    E = E->IgnoreCasts();
+    E = E->IgnoreCasts()->IgnoreParens();
     if (const auto* ASE = dyn_cast<clang::ArraySubscriptExpr>(E)) {
       if (const auto* IL = dyn_cast<clang::IntegerLiteral>(ASE->getIdx()))
         IDSequence.push_back(getProfileID(IL));
@@ -161,15 +161,16 @@ TBRAnalyzer::getIDSequence(const clang::Expr* E,
       if (E->getType()->isPointerType())
         IDSequence.push_back(ProfileID());
     } else if (const auto* DRE = dyn_cast<clang::DeclRefExpr>(E)) {
-      const auto* VD = cast<VarDecl>(DRE->getDecl());
-      if (VD->getType()->isLValueReferenceType()) {
-        VarData* refData = getVarDataFromDecl(VD);
-        if (refData->m_Type == VarData::REF_TYPE) {
-          E = refData->m_Val.m_RefData;
-          continue;
+      if (const auto* VD = dyn_cast<VarDecl>(DRE->getDecl())){
+        if (VD->getType()->isLValueReferenceType()) {
+          VarData* refData = getVarDataFromDecl(VD);
+          if (refData->m_Type == VarData::REF_TYPE) {
+            E = refData->m_Val.m_RefData;
+            continue;
+          }
         }
-      }
-      innerVD = VD;
+        innerVD = VD;
+        }
       break;
     } else if (isa<clang::CXXThisExpr>(E)) {
       innerVD = nullptr;
@@ -265,6 +266,8 @@ void TBRAnalyzer::markLocation(const clang::Expr* E) {
 void TBRAnalyzer::setIsRequired(const clang::Expr* E, bool isReq) {
   llvm::SmallVector<ProfileID, 2> IDSequence;
   const VarDecl* VD = getIDSequence(E, IDSequence);
+  if (!VD)
+      return;
   // Make sure the current branch has a copy of VarDecl for VD
   auto& curBranch = getCurBlockVarsData();
   if (curBranch.find(VD) == curBranch.end()) {
