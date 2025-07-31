@@ -1784,7 +1784,6 @@ __attribute__((always_inline)) __attribute__((device)) void calculate_micro_xs_p
 __attribute__((device)) void calculate_macro_xs_grad_0_11(double *__restrict macro_xs, int mat, double E, Input input, const int *__restrict num_nucs, const int *__restrict mats, int max_num_nucs, const double *__restrict concs, const int *__restrict n_windows, const double *__restrict pseudo_K0Rs, const Window *__restrict windows, Pole *__restrict poles, int max_num_windows, int max_num_poles, double *_d_macro_xs, Pole *_d_poles) {
     int _d_mat = 0;
     double _d_E = 0.;
-    Input _d_input = {0, 0, 0, static_cast<__hm>(0U), 0, 0, 0, 0, 0, 0, 0};
     int _d_max_num_nucs = 0;
     int _d_max_num_windows = 0;
     int _d_max_num_poles = 0;
