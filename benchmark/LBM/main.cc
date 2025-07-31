@@ -20,6 +20,7 @@
 
 /*############################################################################*/
 static LBM_Grid CUDA_srcGrid, CUDA_dstGrid;
+static LBM_Grid CUDA_srcGridb, CUDA_dstGridb;
 
 /*############################################################################*/
 
@@ -39,28 +40,40 @@ int main( int nArgs, char* arg[] ) {
 	MAIN_parseCommandLine( nArgs, arg, &param, params );
 	MAIN_printInfo( &param );
 
-    CUDA_LBM_kernel_loop(param, CUDA_srcGrid, CUDA_dstGrid);
+    MAIN_initialize(&param);
 
-// 	MAIN_initialize( &param );
+    struct timeval stop, start;
+    gettimeofday(&start, NULL);
+    pb_SwitchToTimer(&timers, pb_TimerID_KERNEL);
 
-// 	for( t = 1; t <= param.nTimeSteps; t++ ) {
-//                 pb_SwitchToTimer(&timers, pb_TimerID_KERNEL);
-// 		CUDA_LBM_performStreamCollide( CUDA_srcGrid, CUDA_dstGrid );
-//                 pb_SwitchToTimer(&timers, pb_TimerID_COMPUTE);
-// 		LBM_swapGrids( &CUDA_srcGrid, &CUDA_dstGrid );
+    CUDA_LBM_kernel_loop(param.nTimeSteps, CUDA_srcGrid, CUDA_dstGrid, CUDA_srcGridb, CUDA_dstGridb);
+	cudaDeviceSynchronize();
 
-// 		if( (t & 63) == 0 ) {
-// 			printf( "timestep: %i\n", t );
-// #if 0
-// 			CUDA_LBM_getDeviceGrid((float**)&CUDA_srcGrid, (float**)&TEMP_srcGrid);
-// 			LBM_showGridStatistics( *TEMP_srcGrid );
-// #endif
-// 		}
-// 	}
+    pb_SwitchToTimer(&timers, pb_TimerID_COMPUTE);
+    gettimeofday(&stop, NULL);
+	printf("after grad: %s\n", cudaGetErrorString(cudaGetLastError()));
+    printf("nt: %d took %lu us\n", param.nTimeSteps,
+           (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec -
+               start.tv_usec);
 
-// 	MAIN_finalize( &param );
 
-	LBM_freeGrid( (float**) &TEMP_srcGrid );
+    // 	for( t = 1; t <= param.nTimeSteps; t++ ) {
+    //                 pb_SwitchToTimer(&timers, pb_TimerID_KERNEL);
+    // 		CUDA_LBM_performStreamCollide( CUDA_srcGrid, CUDA_dstGrid );
+    //                 pb_SwitchToTimer(&timers, pb_TimerID_COMPUTE);
+    // 		LBM_swapGrids( &CUDA_srcGrid, &CUDA_dstGrid );
+
+    // 		if( (t & 63) == 0 ) {
+    // 			printf( "timestep: %i\n", t );
+    // #if 0
+    // 			CUDA_LBM_getDeviceGrid((float**)&CUDA_srcGrid,
+    // (float**)&TEMP_srcGrid); 			LBM_showGridStatistics( *TEMP_srcGrid ); #endif
+    // 		}
+    // 	}
+
+    MAIN_finalize(&param);
+
+    LBM_freeGrid( (float**) &TEMP_srcGrid );
 
         pb_SwitchToTimer(&timers, pb_TimerID_NONE);
         pb_PrintTimerSet(&timers);
@@ -145,10 +158,19 @@ void MAIN_initialize( const MAIN_Param* param ) {
 	//Setup DEVICE datastructures
 	CUDA_LBM_allocateGrid( (float**) &CUDA_srcGrid );
 	CUDA_LBM_allocateGrid( (float**) &CUDA_dstGrid );
+#ifdef ALLOW_AD
+    printf("Allocating Derivative pointers\n");
+    CUDA_LBM_allocateGrid((float **)&CUDA_srcGridb);
+    CUDA_LBM_allocateGrid((float **)&CUDA_dstGridb);
+#endif
 
 	//Initialize DEVICE datastructures
 	CUDA_LBM_initializeGrid( (float**)&CUDA_srcGrid, (float**)&TEMP_srcGrid );
 	CUDA_LBM_initializeGrid( (float**)&CUDA_dstGrid, (float**)&TEMP_dstGrid );
+#ifdef ALLOW_AD
+    CUDA_LBM_initializeGrid((float **)&CUDA_srcGridb, (float **)&TEMP_srcGrid);
+    CUDA_LBM_initializeGrid((float **)&CUDA_dstGridb, (float **)&TEMP_dstGrid);
+#endif
 
         pb_SwitchToTimer(&timers, pb_TimerID_COMPUTE);
 	LBM_showGridStatistics( TEMP_srcGrid );
@@ -176,5 +198,9 @@ void MAIN_finalize( const MAIN_Param* param ) {
 	LBM_freeGrid( (float**) &TEMP_srcGrid );
 	CUDA_LBM_freeGrid( (float**) &CUDA_srcGrid );
 	CUDA_LBM_freeGrid( (float**) &CUDA_dstGrid );
+#ifdef ALLOW_AD
+    CUDA_LBM_freeGrid((float **)&CUDA_srcGridb);
+    CUDA_LBM_freeGrid((float **)&CUDA_dstGridb);
+#endif
 }
 

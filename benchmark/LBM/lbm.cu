@@ -37,9 +37,9 @@
 #define TOTAL_MARGIN (2*PADDED_X*PADDED_Y*N_CELL_ENTRIES)
 
 /******************************************************************************/
-void CUDA_LBM_performStreamCollide( LBM_Grid srcGrid, LBM_Grid dstGrid ) {
-	dim3 dimBlock, dimGrid;
-        dimBlock.x = SIZE_X;
+void CUDA_LBM_performStreamCollide( float * srcGrid, float * dstGrid ) {
+    non_differentiable dim3 dimBlock, dimGrid;
+    dimBlock.x = SIZE_X;
 	dimGrid.x = SIZE_Y;
 	dimGrid.y = SIZE_Z;
 	dimBlock.y = dimBlock.z = dimGrid.z = 1;
@@ -47,16 +47,15 @@ void CUDA_LBM_performStreamCollide( LBM_Grid srcGrid, LBM_Grid dstGrid ) {
 //   CUDA_ERRCK;
 }
 
-void CUDA_LBM_kernel_inner_loop(const MAIN_Param param, LBM_Grid CUDA_srcGrid,
-                          LBM_Grid CUDA_dstGrid) {
+void CUDA_LBM_kernel_loop_inner(int nTimeSteps, LBM_Grid srcGrid,
+		                          LBM_Grid dstGrid) {
     int t;
-    // MAIN_initialize(&param);
 
-    for (t = 1; t <= param.nTimeSteps / 2; t++)
+    for (t = 1; t <= nTimeSteps / 2; t++)
     {
         // pb_SwitchToTimer(&timers, pb_TimerID_KERNEL);
-        CUDA_LBM_performStreamCollide(CUDA_srcGrid, CUDA_dstGrid);
-        CUDA_LBM_performStreamCollide(CUDA_dstGrid, CUDA_srcGrid);
+        CUDA_LBM_performStreamCollide(srcGrid, dstGrid);
+        CUDA_LBM_performStreamCollide(dstGrid, srcGrid);
         // pb_SwitchToTimer(&timers, pb_TimerID_COMPUTE);
         // LBM_swapGrids(&CUDA_srcGrid, &CUDA_dstGrid);
 
@@ -71,14 +70,69 @@ void CUDA_LBM_kernel_inner_loop(const MAIN_Param param, LBM_Grid CUDA_srcGrid,
         }
 */
     }
-
-    // MAIN_finalize(&param);
 }
 
-void CUDA_LBM_kernel_loop(const MAIN_Param param, LBM_Grid CUDA_srcGrid,
-                          LBM_Grid CUDA_dstGrid){
-    auto grad =
-        clad::gradient(CUDA_LBM_kernel_inner_loop, "CUDA_srcGrid, CUDA_dstGrid");
+void CUDA_LBM_kernel_loop(int nTimeSteps, LBM_Grid srcGrid,
+                          LBM_Grid dstGrid, LBM_Grid srcGridb, LBM_Grid dstGridb) {
+	constexpr size_t size   = TOTAL_PADDED_CELLS*N_CELL_ENTRIES*sizeof( float ) + 2*TOTAL_MARGIN*sizeof( float );
+	constexpr size_t start = 15489;// + REAL_MARGIN;
+#ifdef ALLOW_AD
+#ifdef VERIFY
+    cudaMemset(srcGridb - REAL_MARGIN, 0, size);
+    cudaMemset(dstGridb - REAL_MARGIN, 0, size);
+
+    float *here = new float[N];
+    memset(here, 0, N * sizeof(float));
+    here[0] = 1.0;
+    cudaMemcpy(srcGridb + start, &here[0], N * sizeof(float),
+               cudaMemcpyHostToDevice);
+
+    cudaMemcpy(&here[0], srcGrid + start, N * sizeof(float),
+               cudaMemcpyDeviceToHost);
+#endif
+    auto grad = clad::gradient(CUDA_LBM_kernel_loop_inner,
+                               "srcGrid, dstGrid");
+    grad.execute(nTimeSteps, srcGrid, dstGrid, srcGridb, dstGridb);
+#ifdef VERIFY
+    cudaMemcpy(&here[0], srcGridb + start, N * sizeof(float),
+               cudaMemcpyDeviceToHost);
+    for (int i = 0; i < N; i++)
+        printf("out here[%d]=%f\n", i, here[i]);
+    printf("der=%f\n", here[0]);
+#endif
+#else
+#ifdef VERIFY
+
+    float *cache = new float[size / sizeof(float)];
+
+    cudaMemcpy(&cache[0], srcGrid - REAL_MARGIN, size, cudaMemcpyDeviceToHost);
+#endif
+
+    CUDA_LBM_kernel_loop_inner(nTimeSteps, srcGrid, dstGrid);
+
+#ifdef VERIFY
+    constexpr size_t N = 1;
+#define PREC 1e-2
+    float *here = new float[N];
+    cudaMemcpy(&here[0], srcGrid + start, N * sizeof(float),
+               cudaMemcpyDeviceToHost);
+
+    cache[start + REAL_MARGIN] += PREC;
+    cudaMemcpy(srcGrid - REAL_MARGIN, &cache[0], size, cudaMemcpyHostToDevice);
+
+    CUDA_LBM_kernel_loop_inner(nTimeSteps, srcGrid, dstGrid);
+
+    float *here2 = new float[N];
+    cudaMemcpy(&here2[0], srcGrid + start, N * sizeof(float),
+               cudaMemcpyDeviceToHost);
+
+    for (int i = 0; i < N; i++)
+        printf("real PREC=%e here[%d]=%f here2=%f dif=%e, der=%f\n", PREC, i,
+               here[i], here2[i], here2[i] - here[i],
+               (here2[i] - here[i]) / PREC);
+#endif
+
+#endif
 }
 
 /*############################################################################*/
