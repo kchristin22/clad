@@ -24,6 +24,9 @@ typedef LBM_Grid* LBM_GridPtr;
 
 /*############################################################################*/
 
+#define REAL_MARGIN (CALC_INDEX(0, 0, 2, 0) - CALC_INDEX(0, 0, 0, 0))
+#define TOTAL_MARGIN (2 * PADDED_X * PADDED_Y * N_CELL_ENTRIES)
+#define SIZE TOTAL_PADDED_CELLS*N_CELL_ENTRIES + 2*TOTAL_MARGIN
 
 #define SWEEP_X  __temp_x__
 #define SWEEP_Y  __temp_y__

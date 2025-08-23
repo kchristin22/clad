@@ -33,8 +33,6 @@
 
 #include "clad/Differentiator/Differentiator.h"
 
-#define REAL_MARGIN (CALC_INDEX(0, 0, 2, 0) - CALC_INDEX(0,0,0,0))
-#define TOTAL_MARGIN (2*PADDED_X*PADDED_Y*N_CELL_ENTRIES)
 
 /******************************************************************************/
 void CUDA_LBM_performStreamCollide( float * srcGrid, float * dstGrid ) {
@@ -47,15 +45,21 @@ void CUDA_LBM_performStreamCollide( float * srcGrid, float * dstGrid ) {
 //   CUDA_ERRCK;
 }
 
-void CUDA_LBM_kernel_loop_inner(int nTimeSteps, LBM_Grid srcGrid,
-		                          LBM_Grid dstGrid) {
-    int t;
-
-    for (t = 1; t <= nTimeSteps / 2; t++)
+void CUDA_LBM_kernel_loop_inner(int nTimeSteps, float srcGrid[SIZE],
+		                          float dstGrid[SIZE]) {
+    // int t;
+    non_differentiable dim3 dimBlock, dimGrid;
+    dimBlock.x = SIZE_X;
+    dimGrid.x = SIZE_Y;
+    dimGrid.y = SIZE_Z;
+    dimBlock.y = dimBlock.z = dimGrid.z = 1;
+    for (unsigned int i = 1; i <= nTimeSteps; i++)
     {
         // pb_SwitchToTimer(&timers, pb_TimerID_KERNEL);
-        CUDA_LBM_performStreamCollide(srcGrid, dstGrid);
-        CUDA_LBM_performStreamCollide(dstGrid, srcGrid);
+        performStreamCollide_kernel<<<dimGrid, dimBlock>>>(srcGrid, dstGrid);
+        LBM_Grid aux = srcGrid;
+        srcGrid = dstGrid;
+        dstGrid = aux;
         // pb_SwitchToTimer(&timers, pb_TimerID_COMPUTE);
         // LBM_swapGrids(&CUDA_srcGrid, &CUDA_dstGrid);
 
@@ -71,6 +75,19 @@ void CUDA_LBM_kernel_loop_inner(int nTimeSteps, LBM_Grid srcGrid,
 */
     }
 }
+
+// void CUDA_LBM_performStreamCollide_grad(float *srcGrid, float *dstGrid, float *_d_srcGrid, float *_d_dstGrid);
+
+
+// void CUDA_LBM_kernel_loop_inner_grad(int nTimeSteps, LBM_Grid srcGrid,
+// 		                          LBM_Grid dstGrid, LBM_Grid _d_srcGrid, LBM_Grid _d_dstGrid) {
+//     for (unsigned int i = 1; i <= nTimeSteps; i++)
+//     {
+//         CUDA_LBM_performStreamCollide_grad(srcGrid, dstGrid, _d_srcGrid, _d_dstGrid);
+//         LBM_swapGrids(&srcGrid, &dstGrid);
+//         LBM_swapGrids(&_d_srcGrid, &_d_dstGrid);
+//     }
+// }
 
 void CUDA_LBM_kernel_loop(int nTimeSteps, LBM_Grid srcGrid,
                           LBM_Grid dstGrid, LBM_Grid srcGridb, LBM_Grid dstGridb) {
@@ -91,8 +108,11 @@ void CUDA_LBM_kernel_loop(int nTimeSteps, LBM_Grid srcGrid,
                cudaMemcpyDeviceToHost);
 #endif
     auto grad = clad::gradient(CUDA_LBM_kernel_loop_inner,
-                               "srcGrid, dstGrid");
-    grad.execute(nTimeSteps, srcGrid, dstGrid, srcGridb, dstGridb);
+       "srcGrid, dstGrid");
+    // grad.execute(nTimeSteps, srcGrid, dstGrid, srcGridb, dstGridb);
+    // CUDA_LBM_kernel_loop_inner_grad(nTimeSteps, srcGrid, dstGrid, srcGridb,
+                                        // dstGridb);
+
 #ifdef VERIFY
     cudaMemcpy(&here[0], srcGridb + start, N * sizeof(float),
                cudaMemcpyDeviceToHost);
@@ -108,7 +128,7 @@ void CUDA_LBM_kernel_loop(int nTimeSteps, LBM_Grid srcGrid,
     cudaMemcpy(&cache[0], srcGrid - REAL_MARGIN, size, cudaMemcpyDeviceToHost);
 #endif
 
-    CUDA_LBM_kernel_loop_inner(nTimeSteps, srcGrid, dstGrid);
+    // CUDA_LBM_kernel_loop_inner(nTimeSteps, srcGrid, dstGrid);
 
 #ifdef VERIFY
     constexpr size_t N = 1;
@@ -420,3 +440,953 @@ void LBM_storeVelocityField( LBM_Grid grid, const char* filename,
 	fclose( file );
 }
 
+// __attribute__((global)) void performStreamCollide_kernel_pullback(float *srcGrid, float *dstGrid, float *_d_srcGrid, float *_d_dstGrid) {
+//     bool _cond0;
+//     float _d_ux = 0.F, _d_uy = 0.F, _d_uz = 0.F, _d_rho = 0.F, _d_u2 = 0.F;
+//     float ux;
+//     float uy;
+//     float uz;
+//     float rho;
+//     float u2;
+//     float _d_temp1 = 0.F, _d_temp2 = 0.F, _d_temp_base = 0.F;
+//     float temp1;
+//     float temp2;
+//     float temp_base;
+//     float _t0;
+//     float _t1;
+//     float _t2;
+//     bool _cond1;
+//     float _t3;
+//     float _t4;
+//     float _t5;
+//     float _t6;
+//     float _t7;
+//     float _t8;
+//     float _t9;
+//     float _t10;
+//     float _t11;
+//     float _t12;
+//     float _t13;
+//     float _t14;
+//     float _t15;
+//     float _t16;
+//     float _t17;
+//     float _t18;
+//     float _t19;
+//     float _t20;
+//     float _t21;
+//     float _t22;
+//     float _t23;
+//     int __temp_x__0, __temp_y__0, __temp_z__0;
+//     __temp_x__0 = threadIdx.x;
+//     __temp_y__0 = blockIdx.x;
+//     __temp_z__0 = blockIdx.y;
+//     float _d_temp_swp = 0.F, _d_tempC = 0.F, _d_tempN = 0.F, _d_tempS = 0.F, _d_tempE = 0.F, _d_tempW = 0.F, _d_tempT = 0.F, _d_tempB = 0.F;
+//     float temp_swp, tempC, tempN, tempS, tempE, tempW, tempT, tempB;
+//     float _d_tempNE = 0.F, _d_tempNW = 0.F, _d_tempSE = 0.F, _d_tempSW = 0.F, _d_tempNT = 0.F, _d_tempNB = 0.F, _d_tempST = 0.F;
+//     float tempNE, tempNW, tempSE, tempSW, tempNT, tempNB, tempST;
+//     float _d_tempSB = 0.F, _d_tempET = 0.F, _d_tempEB = 0.F, _d_tempWT = 0.F, _d_tempWB = 0.F;
+//     float tempSB, tempET, tempEB, tempWT, tempWB;
+//     tempC = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempN = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * N + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempS = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * S + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempE = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * E + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempW = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * W + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempT = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * T + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempB = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * B + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempNE = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NE + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempNW = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NW + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempSE = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SE + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempSW = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SW + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempNT = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NT + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempNB = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NB + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempST = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ST + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempSB = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SB + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempET = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ET + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempEB = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * EB + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempWT = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WT + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     tempWB = srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WB + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     {
+//         _cond0 = (*(unsigned int *)(void *)&srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * FLAGS + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] & OBSTACLE);
+//         if (_cond0) {
+//             temp_swp = tempN;
+//             tempN = tempS;
+//             tempS = temp_swp;
+//             temp_swp = tempE;
+//             tempE = tempW;
+//             tempW = temp_swp;
+//             temp_swp = tempT;
+//             tempT = tempB;
+//             tempB = temp_swp;
+//             temp_swp = tempNE;
+//             tempNE = tempSW;
+//             tempSW = temp_swp;
+//             temp_swp = tempNW;
+//             tempNW = tempSE;
+//             tempSE = temp_swp;
+//             temp_swp = tempNT;
+//             tempNT = tempSB;
+//             tempSB = temp_swp;
+//             temp_swp = tempNB;
+//             tempNB = tempST;
+//             tempST = temp_swp;
+//             temp_swp = tempET;
+//             tempET = tempWB;
+//             tempWB = temp_swp;
+//             temp_swp = tempEB;
+//             tempEB = tempWT;
+//             tempWT = temp_swp;
+//         } else {
+//             rho = tempC + tempN + tempS + tempE + tempW + tempT + tempB + tempNE + tempNW + tempSE + tempSW + tempNT + tempNB + tempST + tempSB + tempET + tempEB + tempWT + tempWB;
+//             ux = +tempE - tempW + tempNE - tempNW + tempSE - tempSW + tempET + tempEB - tempWT - tempWB;
+//             uy = +tempN - tempS + tempNE + tempNW - tempSE - tempSW + tempNT + tempNB - tempST - tempSB;
+//             uz = +tempT - tempB + tempNT - tempNB + tempST - tempSB + tempET - tempEB + tempWT - tempWB;
+//             _t0 = ux;
+//             ux /= rho;
+//             _t1 = uy;
+//             uy /= rho;
+//             _t2 = uz;
+//             uz /= rho;
+//             {
+//                 _cond1 = (*(unsigned int *)(void *)&srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * FLAGS + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] & ACCEL);
+//                 if (_cond1) {
+//                     ux = 0.005F;
+//                     uy = 0.002F;
+//                     uz = 0.F;
+//                 }
+//             }
+//             u2 = 1.5F * (ux * ux + uy * uy + uz * uz) - 1.F;
+//             temp_base = 1.95F * rho;
+//             temp1 = (1.F / 3.F) * temp_base;
+//             temp_base = 1.95000005F * rho;
+//             temp1 = (1.F / 3.F) * temp_base;
+//             temp2 = 1.F - 1.95F;
+//             _t3 = tempC;
+//             tempC = temp2 * tempC + temp1 * -u2;
+//             _t4 = temp1;
+//             temp1 = (1.F / 18.F) * temp_base;
+//             _t5 = tempN;
+//             tempN = temp2 * tempN + temp1 * (uy * (4.5F * uy + 3.F) - u2);
+//             _t6 = tempS;
+//             tempS = temp2 * tempS + temp1 * (uy * (4.5F * uy - 3.F) - u2);
+//             _t7 = tempT;
+//             tempT = temp2 * tempT + temp1 * (uz * (4.5F * uz + 3.F) - u2);
+//             _t8 = tempB;
+//             tempB = temp2 * tempB + temp1 * (uz * (4.5F * uz - 3.F) - u2);
+//             _t9 = tempE;
+//             tempE = temp2 * tempE + temp1 * (ux * (4.5F * ux + 3.F) - u2);
+//             _t10 = tempW;
+//             tempW = temp2 * tempW + temp1 * (ux * (4.5F * ux - 3.F) - u2);
+//             _t11 = temp1;
+//             temp1 = (1.F / 36.F) * temp_base;
+//             _t12 = tempNT;
+//             tempNT = temp2 * tempNT + temp1 * ((+uy + uz) * (4.5F * (+uy + uz) + 3.F) - u2);
+//             _t13 = tempNB;
+//             tempNB = temp2 * tempNB + temp1 * ((+uy - uz) * (4.5F * (+uy - uz) + 3.F) - u2);
+//             _t14 = tempST;
+//             tempST = temp2 * tempST + temp1 * ((-uy + uz) * (4.5F * (-uy + uz) + 3.F) - u2);
+//             _t15 = tempSB;
+//             tempSB = temp2 * tempSB + temp1 * ((-uy - uz) * (4.5F * (-uy - uz) + 3.F) - u2);
+//             _t16 = tempNE;
+//             tempNE = temp2 * tempNE + temp1 * ((+ux + uy) * (4.5F * (+ux + uy) + 3.F) - u2);
+//             _t17 = tempSE;
+//             tempSE = temp2 * tempSE + temp1 * ((+ux - uy) * (4.5F * (+ux - uy) + 3.F) - u2);
+//             _t18 = tempET;
+//             tempET = temp2 * tempET + temp1 * ((+ux + uz) * (4.5F * (+ux + uz) + 3.F) - u2);
+//             _t19 = tempEB;
+//             tempEB = temp2 * tempEB + temp1 * ((+ux - uz) * (4.5F * (+ux - uz) + 3.F) - u2);
+//             _t20 = tempNW;
+//             tempNW = temp2 * tempNW + temp1 * ((-ux + uy) * (4.5F * (-ux + uy) + 3.F) - u2);
+//             _t21 = tempSW;
+//             tempSW = temp2 * tempSW + temp1 * ((-ux - uy) * (4.5F * (-ux - uy) + 3.F) - u2);
+//             _t22 = tempWT;
+//             tempWT = temp2 * tempWT + temp1 * ((-ux + uz) * (4.5F * (-ux + uz) + 3.F) - u2);
+//             _t23 = tempWB;
+//             tempWB = temp2 * tempWB + temp1 * ((-ux - uz) * (4.5F * (-ux - uz) + 3.F) - u2);
+//         }
+//     }
+//     if ((((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0))) == 15489)
+//         printf("C: (%d, %d, %d)\n", __temp_x__0, __temp_y__0, __temp_z__0);
+//     float _t24 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempC;
+//     if ((((120 + 8) * (120 + 0) * (150 + 4)) * N + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0))) == 15489)
+//         printf("N: (%d, %d, %d)\n", __temp_x__0, __temp_y__0, __temp_z__0);
+//     float _t25 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * N + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * N + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempN;
+//     if ((((120 + 8) * (120 + 0) * (150 + 4)) * S + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0))) == 15489)
+//         printf("S: (%d, %d, %d)\n", __temp_x__0, __temp_y__0, __temp_z__0);
+//     float _t26 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * S + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * S + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempS;
+//     float _t27 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * E + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * E + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempE;
+//     float _t28 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * W + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * W + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempW;
+//     float _t29 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * T + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * T + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempT;
+//     float _t30 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * B + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * B + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempB;
+//     float _t31 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NE + ((+1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NE + ((+1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempNE;
+//     float _t32 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NW + ((-1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NW + ((-1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempNW;
+//     float _t33 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SE + ((+1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SE + ((+1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempSE;
+//     float _t34 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SW + ((-1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SW + ((-1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempSW;
+//     float _t35 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NT + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NT + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempNT;
+//     float _t36 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NB + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NB + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempNB;
+//     float _t37 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ST + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ST + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempST;
+//     float _t38 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SB + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SB + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempSB;
+//     float _t39 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ET + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ET + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempET;
+//     float _t40 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * EB + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * EB + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempEB;
+//     float _t41 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WT + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WT + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempWT;
+//     float _t42 = dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WB + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//     dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WB + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = tempWB;
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WB + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t42;
+//         float _r_d101 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WB + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WB + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempWB += _r_d101;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WT + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t41;
+//         float _r_d100 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WT + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WT + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempWT += _r_d100;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * EB + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t40;
+//         float _r_d99 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * EB + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * EB + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempEB += _r_d99;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ET + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t39;
+//         float _r_d98 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ET + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ET + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempET += _r_d98;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SB + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t38;
+//         float _r_d97 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SB + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SB + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempSB += _r_d97;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ST + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t37;
+//         float _r_d96 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ST + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ST + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempST += _r_d96;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NB + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t36;
+//         float _r_d95 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NB + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NB + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempNB += _r_d95;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NT + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t35;
+//         float _r_d94 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NT + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NT + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempNT += _r_d94;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SW + ((-1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t34;
+//         float _r_d93 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SW + ((-1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SW + ((-1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempSW += _r_d93;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SE + ((+1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t33;
+//         float _r_d92 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SE + ((+1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SE + ((+1 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempSE += _r_d92;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NW + ((-1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t32;
+//         float _r_d91 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NW + ((-1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NW + ((-1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempNW += _r_d91;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NE + ((+1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t31;
+//         float _r_d90 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NE + ((+1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NE + ((+1 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempNE += _r_d90;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * B + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t30;
+//         float _r_d89 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * B + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * B + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (-1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempB += _r_d89;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * T + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t29;
+//         float _r_d88 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * T + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * T + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (+1 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempT += _r_d88;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * W + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t28;
+//         float _r_d87 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * W + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * W + ((-1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempW += _r_d87;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * E + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t27;
+//         float _r_d86 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * E + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * E + ((+1 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempE += _r_d86;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * S + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t26;
+//         float _r_d85 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * S + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * S + ((0 + __temp_x__0) + (-1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempS += _r_d85;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * N + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t25;
+//         float _r_d84 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * N + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * N + ((0 + __temp_x__0) + (+1 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempN += _r_d84;
+//     }
+//     {
+//         dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = _t24;
+//         float _r_d83 = _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))];
+//         _d_dstGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] = 0.F;
+//         _d_tempC += _r_d83;
+//         if ((((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0))) == 15489)
+//             printf("_d_dstGrid: %f\n", _r_d83);
+//     }
+//     if (_cond0) {
+//         {
+//             float _r_d45 = _d_tempWT;
+//             _d_tempWT = 0.F;
+//             _d_temp_swp += _r_d45;
+//         }
+//         {
+//             float _r_d44 = _d_tempEB;
+//             _d_tempEB = 0.F;
+//             _d_tempWT += _r_d44;
+//         }
+//         {
+//             float _r_d43 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempEB += _r_d43;
+//         }
+//         {
+//             float _r_d42 = _d_tempWB;
+//             _d_tempWB = 0.F;
+//             _d_temp_swp += _r_d42;
+//         }
+//         {
+//             float _r_d41 = _d_tempET;
+//             _d_tempET = 0.F;
+//             _d_tempWB += _r_d41;
+//         }
+//         {
+//             float _r_d40 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempET += _r_d40;
+//         }
+//         {
+//             float _r_d39 = _d_tempST;
+//             _d_tempST = 0.F;
+//             _d_temp_swp += _r_d39;
+//         }
+//         {
+//             float _r_d38 = _d_tempNB;
+//             _d_tempNB = 0.F;
+//             _d_tempST += _r_d38;
+//         }
+//         {
+//             float _r_d37 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempNB += _r_d37;
+//         }
+//         {
+//             float _r_d36 = _d_tempSB;
+//             _d_tempSB = 0.F;
+//             _d_temp_swp += _r_d36;
+//         }
+//         {
+//             float _r_d35 = _d_tempNT;
+//             _d_tempNT = 0.F;
+//             _d_tempSB += _r_d35;
+//         }
+//         {
+//             float _r_d34 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempNT += _r_d34;
+//         }
+//         {
+//             float _r_d33 = _d_tempSE;
+//             _d_tempSE = 0.F;
+//             _d_temp_swp += _r_d33;
+//         }
+//         {
+//             float _r_d32 = _d_tempNW;
+//             _d_tempNW = 0.F;
+//             _d_tempSE += _r_d32;
+//         }
+//         {
+//             float _r_d31 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempNW += _r_d31;
+//         }
+//         {
+//             float _r_d30 = _d_tempSW;
+//             _d_tempSW = 0.F;
+//             _d_temp_swp += _r_d30;
+//         }
+//         {
+//             float _r_d29 = _d_tempNE;
+//             _d_tempNE = 0.F;
+//             _d_tempSW += _r_d29;
+//         }
+//         {
+//             float _r_d28 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempNE += _r_d28;
+//         }
+//         {
+//             float _r_d27 = _d_tempB;
+//             _d_tempB = 0.F;
+//             _d_temp_swp += _r_d27;
+//         }
+//         {
+//             float _r_d26 = _d_tempT;
+//             _d_tempT = 0.F;
+//             _d_tempB += _r_d26;
+//         }
+//         {
+//             float _r_d25 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempT += _r_d25;
+//         }
+//         {
+//             float _r_d24 = _d_tempW;
+//             _d_tempW = 0.F;
+//             _d_temp_swp += _r_d24;
+//         }
+//         {
+//             float _r_d23 = _d_tempE;
+//             _d_tempE = 0.F;
+//             _d_tempW += _r_d23;
+//         }
+//         {
+//             float _r_d22 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempE += _r_d22;
+//         }
+//         {
+//             float _r_d21 = _d_tempS;
+//             _d_tempS = 0.F;
+//             _d_temp_swp += _r_d21;
+//         }
+//         {
+//             float _r_d20 = _d_tempN;
+//             _d_tempN = 0.F;
+//             _d_tempS += _r_d20;
+//         }
+//         {
+//             float _r_d19 = _d_temp_swp;
+//             _d_temp_swp = 0.F;
+//             _d_tempN += _r_d19;
+//         }
+//     } else {
+//         {
+//             tempWB = _t23;
+//             float _r_d82 = _d_tempWB;
+//             _d_tempWB = 0.F;
+//             _d_temp2 += _r_d82 * tempWB;
+//             _d_tempWB += temp2 * _r_d82;
+//             _d_temp1 += _r_d82 * ((-ux - uz) * (4.5F * (-ux - uz) + 3.F) - u2);
+//             _d_ux += -temp1 * _r_d82 * (4.5F * (-ux - uz) + 3.F);
+//             _d_uz += -temp1 * _r_d82 * (4.5F * (-ux - uz) + 3.F);
+//             _d_ux += -4.5F * (-ux - uz) * temp1 * _r_d82;
+//             _d_uz += -4.5F * (-ux - uz) * temp1 * _r_d82;
+//             _d_u2 += -temp1 * _r_d82;
+//         }
+//         {
+//             tempWT = _t22;
+//             float _r_d81 = _d_tempWT;
+//             _d_tempWT = 0.F;
+//             _d_temp2 += _r_d81 * tempWT;
+//             _d_tempWT += temp2 * _r_d81;
+//             _d_temp1 += _r_d81 * ((-ux + uz) * (4.5F * (-ux + uz) + 3.F) - u2);
+//             _d_ux += -temp1 * _r_d81 * (4.5F * (-ux + uz) + 3.F);
+//             _d_uz += temp1 * _r_d81 * (4.5F * (-ux + uz) + 3.F);
+//             _d_ux += -4.5F * (-ux + uz) * temp1 * _r_d81;
+//             _d_uz += 4.5F * (-ux + uz) * temp1 * _r_d81;
+//             _d_u2 += -temp1 * _r_d81;
+//         }
+//         {
+//             tempSW = _t21;
+//             float _r_d80 = _d_tempSW;
+//             _d_tempSW = 0.F;
+//             _d_temp2 += _r_d80 * tempSW;
+//             _d_tempSW += temp2 * _r_d80;
+//             _d_temp1 += _r_d80 * ((-ux - uy) * (4.5F * (-ux - uy) + 3.F) - u2);
+//             _d_ux += -temp1 * _r_d80 * (4.5F * (-ux - uy) + 3.F);
+//             _d_uy += -temp1 * _r_d80 * (4.5F * (-ux - uy) + 3.F);
+//             _d_ux += -4.5F * (-ux - uy) * temp1 * _r_d80;
+//             _d_uy += -4.5F * (-ux - uy) * temp1 * _r_d80;
+//             _d_u2 += -temp1 * _r_d80;
+//         }
+//         {
+//             tempNW = _t20;
+//             float _r_d79 = _d_tempNW;
+//             _d_tempNW = 0.F;
+//             _d_temp2 += _r_d79 * tempNW;
+//             _d_tempNW += temp2 * _r_d79;
+//             _d_temp1 += _r_d79 * ((-ux + uy) * (4.5F * (-ux + uy) + 3.F) - u2);
+//             _d_ux += -temp1 * _r_d79 * (4.5F * (-ux + uy) + 3.F);
+//             _d_uy += temp1 * _r_d79 * (4.5F * (-ux + uy) + 3.F);
+//             _d_ux += -4.5F * (-ux + uy) * temp1 * _r_d79;
+//             _d_uy += 4.5F * (-ux + uy) * temp1 * _r_d79;
+//             _d_u2 += -temp1 * _r_d79;
+//         }
+//         {
+//             tempEB = _t19;
+//             float _r_d78 = _d_tempEB;
+//             _d_tempEB = 0.F;
+//             _d_temp2 += _r_d78 * tempEB;
+//             _d_tempEB += temp2 * _r_d78;
+//             _d_temp1 += _r_d78 * ((+ux - uz) * (4.5F * (+ux - uz) + 3.F) - u2);
+//             _d_ux += temp1 * _r_d78 * (4.5F * (+ux - uz) + 3.F);
+//             _d_uz += -temp1 * _r_d78 * (4.5F * (+ux - uz) + 3.F);
+//             _d_ux += 4.5F * (+ux - uz) * temp1 * _r_d78;
+//             _d_uz += -4.5F * (+ux - uz) * temp1 * _r_d78;
+//             _d_u2 += -temp1 * _r_d78;
+//         }
+//         {
+//             tempET = _t18;
+//             float _r_d77 = _d_tempET;
+//             _d_tempET = 0.F;
+//             _d_temp2 += _r_d77 * tempET;
+//             _d_tempET += temp2 * _r_d77;
+//             _d_temp1 += _r_d77 * ((+ux + uz) * (4.5F * (+ux + uz) + 3.F) - u2);
+//             _d_ux += temp1 * _r_d77 * (4.5F * (+ux + uz) + 3.F);
+//             _d_uz += temp1 * _r_d77 * (4.5F * (+ux + uz) + 3.F);
+//             _d_ux += 4.5F * (+ux + uz) * temp1 * _r_d77;
+//             _d_uz += 4.5F * (+ux + uz) * temp1 * _r_d77;
+//             _d_u2 += -temp1 * _r_d77;
+//         }
+//         {
+//             tempSE = _t17;
+//             float _r_d76 = _d_tempSE;
+//             _d_tempSE = 0.F;
+//             _d_temp2 += _r_d76 * tempSE;
+//             _d_tempSE += temp2 * _r_d76;
+//             _d_temp1 += _r_d76 * ((+ux - uy) * (4.5F * (+ux - uy) + 3.F) - u2);
+//             _d_ux += temp1 * _r_d76 * (4.5F * (+ux - uy) + 3.F);
+//             _d_uy += -temp1 * _r_d76 * (4.5F * (+ux - uy) + 3.F);
+//             _d_ux += 4.5F * (+ux - uy) * temp1 * _r_d76;
+//             _d_uy += -4.5F * (+ux - uy) * temp1 * _r_d76;
+//             _d_u2 += -temp1 * _r_d76;
+//         }
+//         {
+//             tempNE = _t16;
+//             float _r_d75 = _d_tempNE;
+//             _d_tempNE = 0.F;
+//             _d_temp2 += _r_d75 * tempNE;
+//             _d_tempNE += temp2 * _r_d75;
+//             _d_temp1 += _r_d75 * ((+ux + uy) * (4.5F * (+ux + uy) + 3.F) - u2);
+//             _d_ux += temp1 * _r_d75 * (4.5F * (+ux + uy) + 3.F);
+//             _d_uy += temp1 * _r_d75 * (4.5F * (+ux + uy) + 3.F);
+//             _d_ux += 4.5F * (+ux + uy) * temp1 * _r_d75;
+//             _d_uy += 4.5F * (+ux + uy) * temp1 * _r_d75;
+//             _d_u2 += -temp1 * _r_d75;
+//         }
+//         {
+//             tempSB = _t15;
+//             float _r_d74 = _d_tempSB;
+//             _d_tempSB = 0.F;
+//             _d_temp2 += _r_d74 * tempSB;
+//             _d_tempSB += temp2 * _r_d74;
+//             _d_temp1 += _r_d74 * ((-uy - uz) * (4.5F * (-uy - uz) + 3.F) - u2);
+//             _d_uy += -temp1 * _r_d74 * (4.5F * (-uy - uz) + 3.F);
+//             _d_uz += -temp1 * _r_d74 * (4.5F * (-uy - uz) + 3.F);
+//             _d_uy += -4.5F * (-uy - uz) * temp1 * _r_d74;
+//             _d_uz += -4.5F * (-uy - uz) * temp1 * _r_d74;
+//             _d_u2 += -temp1 * _r_d74;
+//         }
+//         {
+//             tempST = _t14;
+//             float _r_d73 = _d_tempST;
+//             _d_tempST = 0.F;
+//             _d_temp2 += _r_d73 * tempST;
+//             _d_tempST += temp2 * _r_d73;
+//             _d_temp1 += _r_d73 * ((-uy + uz) * (4.5F * (-uy + uz) + 3.F) - u2);
+//             _d_uy += -temp1 * _r_d73 * (4.5F * (-uy + uz) + 3.F);
+//             _d_uz += temp1 * _r_d73 * (4.5F * (-uy + uz) + 3.F);
+//             _d_uy += -4.5F * (-uy + uz) * temp1 * _r_d73;
+//             _d_uz += 4.5F * (-uy + uz) * temp1 * _r_d73;
+//             _d_u2 += -temp1 * _r_d73;
+//         }
+//         {
+//             tempNB = _t13;
+//             float _r_d72 = _d_tempNB;
+//             _d_tempNB = 0.F;
+//             _d_temp2 += _r_d72 * tempNB;
+//             _d_tempNB += temp2 * _r_d72;
+//             _d_temp1 += _r_d72 * ((+uy - uz) * (4.5F * (+uy - uz) + 3.F) - u2);
+//             _d_uy += temp1 * _r_d72 * (4.5F * (+uy - uz) + 3.F);
+//             _d_uz += -temp1 * _r_d72 * (4.5F * (+uy - uz) + 3.F);
+//             _d_uy += 4.5F * (+uy - uz) * temp1 * _r_d72;
+//             _d_uz += -4.5F * (+uy - uz) * temp1 * _r_d72;
+//             _d_u2 += -temp1 * _r_d72;
+//         }
+//         {
+//             tempNT = _t12;
+//             float _r_d71 = _d_tempNT;
+//             _d_tempNT = 0.F;
+//             _d_temp2 += _r_d71 * tempNT;
+//             _d_tempNT += temp2 * _r_d71;
+//             _d_temp1 += _r_d71 * ((+uy + uz) * (4.5F * (+uy + uz) + 3.F) - u2);
+//             _d_uy += temp1 * _r_d71 * (4.5F * (+uy + uz) + 3.F);
+//             _d_uz += temp1 * _r_d71 * (4.5F * (+uy + uz) + 3.F);
+//             _d_uy += 4.5F * (+uy + uz) * temp1 * _r_d71;
+//             _d_uz += 4.5F * (+uy + uz) * temp1 * _r_d71;
+//             _d_u2 += -temp1 * _r_d71;
+//         }
+//         {
+//             temp1 = _t11;
+//             float _r_d70 = _d_temp1;
+//             _d_temp1 = 0.F;
+//             _d_temp_base += (1.F / 36.F) * _r_d70;
+//         }
+//         {
+//             tempW = _t10;
+//             float _r_d69 = _d_tempW;
+//             _d_tempW = 0.F;
+//             _d_temp2 += _r_d69 * tempW;
+//             _d_tempW += temp2 * _r_d69;
+//             _d_temp1 += _r_d69 * (ux * (4.5F * ux - 3.F) - u2);
+//             _d_ux += temp1 * _r_d69 * (4.5F * ux - 3.F);
+//             _d_ux += 4.5F * ux * temp1 * _r_d69;
+//             _d_u2 += -temp1 * _r_d69;
+//         }
+//         {
+//             tempE = _t9;
+//             float _r_d68 = _d_tempE;
+//             _d_tempE = 0.F;
+//             _d_temp2 += _r_d68 * tempE;
+//             _d_tempE += temp2 * _r_d68;
+//             _d_temp1 += _r_d68 * (ux * (4.5F * ux + 3.F) - u2);
+//             _d_ux += temp1 * _r_d68 * (4.5F * ux + 3.F);
+//             _d_ux += 4.5F * ux * temp1 * _r_d68;
+//             _d_u2 += -temp1 * _r_d68;
+//         }
+//         {
+//             tempB = _t8;
+//             float _r_d67 = _d_tempB;
+//             _d_tempB = 0.F;
+//             _d_temp2 += _r_d67 * tempB;
+//             _d_tempB += temp2 * _r_d67;
+//             _d_temp1 += _r_d67 * (uz * (4.5F * uz - 3.F) - u2);
+//             _d_uz += temp1 * _r_d67 * (4.5F * uz - 3.F);
+//             _d_uz += 4.5F * uz * temp1 * _r_d67;
+//             _d_u2 += -temp1 * _r_d67;
+//         }
+//         {
+//             tempT = _t7;
+//             float _r_d66 = _d_tempT;
+//             _d_tempT = 0.F;
+//             _d_temp2 += _r_d66 * tempT;
+//             _d_tempT += temp2 * _r_d66;
+//             _d_temp1 += _r_d66 * (uz * (4.5F * uz + 3.F) - u2);
+//             _d_uz += temp1 * _r_d66 * (4.5F * uz + 3.F);
+//             _d_uz += 4.5F * uz * temp1 * _r_d66;
+//             _d_u2 += -temp1 * _r_d66;
+//         }
+//         {
+//             tempS = _t6;
+//             float _r_d65 = _d_tempS;
+//             _d_tempS = 0.F;
+//             _d_temp2 += _r_d65 * tempS;
+//             _d_tempS += temp2 * _r_d65;
+//             _d_temp1 += _r_d65 * (uy * (4.5F * uy - 3.F) - u2);
+//             _d_uy += temp1 * _r_d65 * (4.5F * uy - 3.F);
+//             _d_uy += 4.5F * uy * temp1 * _r_d65;
+//             _d_u2 += -temp1 * _r_d65;
+//         }
+//         {
+//             tempN = _t5;
+//             float _r_d64 = _d_tempN;
+//             _d_tempN = 0.F;
+//             _d_temp2 += _r_d64 * tempN;
+//             _d_tempN += temp2 * _r_d64;
+//             _d_temp1 += _r_d64 * (uy * (4.5F * uy + 3.F) - u2);
+//             _d_uy += temp1 * _r_d64 * (4.5F * uy + 3.F);
+//             _d_uy += 4.5F * uy * temp1 * _r_d64;
+//             _d_u2 += -temp1 * _r_d64;
+//         }
+//         {
+//             temp1 = _t4;
+//             float _r_d63 = _d_temp1;
+//             _d_temp1 = 0.F;
+//             _d_temp_base += (1.F / 18.F) * _r_d63;
+//         }
+//         {
+//             tempC = _t3;
+//             float _r_d62 = _d_tempC;
+//             _d_tempC = 0.F;
+//             _d_temp2 += _r_d62 * tempC;
+//             _d_tempC += temp2 * _r_d62;
+//             _d_temp1 += _r_d62 * -u2;
+//             _d_u2 += -temp1 * _r_d62;
+//         }
+//         {
+//             float _r_d61 = _d_temp2;
+//             _d_temp2 = 0.F;
+//         }
+//         {
+//             float _r_d60 = _d_temp1;
+//             _d_temp1 = 0.F;
+//             _d_temp_base += (1.F / 3.F) * _r_d60;
+//         }
+//         {
+//             float _r_d59 = _d_temp_base;
+//             _d_temp_base = 0.F;
+//             _d_rho += 1.95F * _r_d59;
+//         }
+//         {
+//             float _r_d58 = _d_temp1;
+//             _d_temp1 = 0.F;
+//             _d_temp_base += (1.f / 3.f) * _r_d58;
+//         }
+//         {
+//             float _r_d57 = _d_temp_base;
+//             _d_temp_base = 0.F;
+//             _d_rho += 1.95f * _r_d57;
+//         }
+//         {
+//             float _r_d56 = _d_u2;
+//             _d_u2 = 0.F;
+//             _d_ux += 1.5F * _r_d56 * ux;
+//             _d_ux += ux * 1.5F * _r_d56;
+//             _d_uy += 1.5F * _r_d56 * uy;
+//             _d_uy += uy * 1.5F * _r_d56;
+//             _d_uz += 1.5F * _r_d56 * uz;
+//             _d_uz += uz * 1.5F * _r_d56;
+//         }
+//         if (_cond1) {
+//             {
+//                 float _r_d55 = _d_uz;
+//                 _d_uz = 0.F;
+//             }
+//             {
+//                 float _r_d54 = _d_uy;
+//                 _d_uy = 0.F;
+//             }
+//             {
+//                 float _r_d53 = _d_ux;
+//                 _d_ux = 0.F;
+//             }
+//         }
+//         {
+//             uz = _t2;
+//             float _r_d52 = _d_uz;
+//             _d_uz = 0.F;
+//             _d_uz += _r_d52 / rho;
+//             float _r2 = _r_d52 * -uz / (rho * rho);
+//             _d_rho += _r2;
+//         }
+//         {
+//             uy = _t1;
+//             float _r_d51 = _d_uy;
+//             _d_uy = 0.F;
+//             _d_uy += _r_d51 / rho;
+//             float _r1 = _r_d51 * -uy / (rho * rho);
+//             _d_rho += _r1;
+//         }
+//         {
+//             ux = _t0;
+//             float _r_d50 = _d_ux;
+//             _d_ux = 0.F;
+//             _d_ux += _r_d50 / rho;
+//             float _r0 = _r_d50 * -ux / (rho * rho);
+//             _d_rho += _r0;
+//         }
+//         {
+//             float _r_d49 = _d_uz;
+//             _d_uz = 0.F;
+//             _d_tempT += _r_d49;
+//             _d_tempB += -_r_d49;
+//             _d_tempNT += _r_d49;
+//             _d_tempNB += -_r_d49;
+//             _d_tempST += _r_d49;
+//             _d_tempSB += -_r_d49;
+//             _d_tempET += _r_d49;
+//             _d_tempEB += -_r_d49;
+//             _d_tempWT += _r_d49;
+//             _d_tempWB += -_r_d49;
+//         }
+//         {
+//             float _r_d48 = _d_uy;
+//             _d_uy = 0.F;
+//             _d_tempN += _r_d48;
+//             _d_tempS += -_r_d48;
+//             _d_tempNE += _r_d48;
+//             _d_tempNW += _r_d48;
+//             _d_tempSE += -_r_d48;
+//             _d_tempSW += -_r_d48;
+//             _d_tempNT += _r_d48;
+//             _d_tempNB += _r_d48;
+//             _d_tempST += -_r_d48;
+//             _d_tempSB += -_r_d48;
+//         }
+//         {
+//             float _r_d47 = _d_ux;
+//             _d_ux = 0.F;
+//             _d_tempE += _r_d47;
+//             _d_tempW += -_r_d47;
+//             _d_tempNE += _r_d47;
+//             _d_tempNW += -_r_d47;
+//             _d_tempSE += _r_d47;
+//             _d_tempSW += -_r_d47;
+//             _d_tempET += _r_d47;
+//             _d_tempEB += _r_d47;
+//             _d_tempWT += -_r_d47;
+//             _d_tempWB += -_r_d47;
+//         }
+//         {
+//             float _r_d46 = _d_rho;
+//             _d_rho = 0.F;
+//             _d_tempC += _r_d46;
+//             _d_tempN += _r_d46;
+//             _d_tempS += _r_d46;
+//             _d_tempE += _r_d46;
+//             _d_tempW += _r_d46;
+//             _d_tempT += _r_d46;
+//             _d_tempB += _r_d46;
+//             _d_tempNE += _r_d46;
+//             _d_tempNW += _r_d46;
+//             _d_tempSE += _r_d46;
+//             _d_tempSW += _r_d46;
+//             _d_tempNT += _r_d46;
+//             _d_tempNB += _r_d46;
+//             _d_tempST += _r_d46;
+//             _d_tempSB += _r_d46;
+//             _d_tempET += _r_d46;
+//             _d_tempEB += _r_d46;
+//             _d_tempWT += _r_d46;
+//             _d_tempWB += _r_d46;
+//         }
+//     }
+//     {
+//         float _r_d18 = _d_tempWB;
+//         _d_tempWB = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WB + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d18);
+//     }
+//     {
+//         float _r_d17 = _d_tempWT;
+//         _d_tempWT = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * WT + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d17);
+//     }
+//     {
+//         float _r_d16 = _d_tempEB;
+//         _d_tempEB = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * EB + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d16);
+//     }
+//     {
+//         float _r_d15 = _d_tempET;
+//         _d_tempET = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ET + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d15);
+//     }
+//     {
+//         float _r_d14 = _d_tempSB;
+//         _d_tempSB = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SB + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d14);
+//     }
+//     {
+//         float _r_d13 = _d_tempST;
+//         _d_tempST = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * ST + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d13);
+//     }
+//     {
+//         float _r_d12 = _d_tempNB;
+//         _d_tempNB = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NB + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d12);
+//     }
+//     {
+//         float _r_d11 = _d_tempNT;
+//         _d_tempNT = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NT + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d11);
+//     }
+//     {
+//         float _r_d10 = _d_tempSW;
+//         _d_tempSW = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SW + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d10);
+//     }
+//     {
+//         float _r_d9 = _d_tempSE;
+//         _d_tempSE = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * SE + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d9);
+//     }
+//     {
+//         float _r_d8 = _d_tempNW;
+//         _d_tempNW = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NW + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d8);
+//     }
+//     {
+//         float _r_d7 = _d_tempNE;
+//         _d_tempNE = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * NE + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d7);
+//     }
+//     {
+//         float _r_d6 = _d_tempB;
+//         _d_tempB = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * B + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d6);
+//     }
+//     {
+//         float _r_d5 = _d_tempT;
+//         _d_tempT = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * T + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d5);
+//     }
+//     {
+//         float _r_d4 = _d_tempW;
+//         _d_tempW = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * W + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d4);
+//     }
+//     {
+//         float _r_d3 = _d_tempE;
+//         _d_tempE = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * E + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d3);
+//     }
+//     {
+//         float _r_d2 = _d_tempS;
+//         _d_tempS = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * S + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d2);
+//     }
+//     {
+//         float _r_d1 = _d_tempN;
+//         _d_tempN = 0.F;
+//         atomicAdd(&_d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * N + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))], _r_d1);
+//     }
+//     {
+//         float _r_d0 = _d_tempC;
+//         _d_tempC = 0.F;
+//         _d_srcGrid[(((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0)))] += _r_d0;
+//         if ((((120 + 8) * (120 + 0) * (150 + 4)) * C + ((0 + __temp_x__0) + (0 + __temp_y__0) * (120 + 8) + (0 + __temp_z__0) * (120 + 8) * (120 + 0))) == 15489)
+//             printf("_d_srcGrid: %f\n", _d_srcGrid[15489]);
+//     }
+// }
+// void CUDA_LBM_performStreamCollide_grad(float *srcGrid, float *dstGrid, float *_d_srcGrid, float *_d_dstGrid) {
+//     dim3 dimBlock(1, 1, 1), dimGrid(1, 1, 1);
+//     dimBlock.x = (120);
+//     dimGrid.x = (120);
+//     dimGrid.y = (150);
+//     dimBlock.y = dimBlock.z = dimGrid.z = 1;
+//     performStreamCollide_kernel<<<dimGrid, dimBlock>>>(srcGrid, dstGrid);
+//     performStreamCollide_kernel_pullback<<<dimGrid, dimBlock>>>(srcGrid, dstGrid, _d_srcGrid, _d_dstGrid);
+// }

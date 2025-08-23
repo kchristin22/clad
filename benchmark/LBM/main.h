@@ -19,7 +19,7 @@ typedef struct {
 	int nTimeSteps;
 	char* resultFilename;
 	char* obstacleFilename;
-} non_differentiable MAIN_Param;
+} MAIN_Param;
 
 /*############################################################################*/
 

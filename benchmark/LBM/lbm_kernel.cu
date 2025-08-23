@@ -16,13 +16,13 @@
 #define DFL3 (1.0f/36.0f)
 /******************************************************************************/
 
-__global__ void performStreamCollide_kernel( float* srcGrid, float* dstGrid ) 
+__global__ void performStreamCollide_kernel(const float srcGrid[SIZE], float dstGrid[SIZE])
 {
 
 	//Using some predefined macros here.  Consider this the declaration 
         //  and initialization of the variables SWEEP_X, SWEEP_Y and SWEEP_Z
 
-        SWEEP_VAR
+        non_differentiable SWEEP_VAR
         SWEEP_X = threadIdx.x;
         SWEEP_Y = blockIdx.x;
         SWEEP_Z = blockIdx.y;

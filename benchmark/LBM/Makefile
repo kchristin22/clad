@@ -17,7 +17,7 @@ COALESE     ?= yes
 CACHELICM   ?= yes
 ABI         ?= yes
 ALLOCATOR   ?= yes
-VERIFY      ?= no
+VERIFY      ?= yes
 
 DEBUG       = no
 PROFILE     = no
