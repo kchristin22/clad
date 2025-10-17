@@ -301,9 +301,12 @@ private:
     m_using_sbo = true;
   }
 
-  template <typename ElTy> void destroy_element(ElTy* elem) { elem->~ElTy(); }
+  template <typename ElTy> CUDA_HOST_DEVICE void destroy_element(ElTy* elem) {
+    elem->~ElTy();
+  }
 
-  template <typename ElTy, size_t N> void destroy_element(ElTy (*arr)[N]) {
+  template <typename ElTy, size_t N>
+  CUDA_HOST_DEVICE void destroy_element(ElTy (*arr)[N]) {
     for (size_t i = 0; i < N; ++i)
       (*arr)[i].~ElTy();
   }
