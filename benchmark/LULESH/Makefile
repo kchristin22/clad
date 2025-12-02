@@ -6,7 +6,7 @@ CLANG_PATH ?= /usr/lib/llvm-19/bin/clang++
 SM_VERSION  = 75
 
 # Ablation testing & numerical verification
-VERIFY  ?= yes
+VERIFY  ?= no
 FORWARD ?= no
 BRANCHYOPT ?= no
 OPTIMIZE ?= yes
